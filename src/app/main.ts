@@ -106,7 +106,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   // Show splash window, if configured
   const splashWindow = config.app.windows[config.app.splashWindowID];
   if (splashWindow) {
-    // Can’t display splash screen before the app is ready
+    // Can’t display splash screen before the app is ready, though
     app.whenReady().then(() => { _openWindow(config.app.splashWindowID); });
   }
 
