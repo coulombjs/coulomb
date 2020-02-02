@@ -274,7 +274,7 @@ async function reportBackendStatusToAllWindows(dbName: string, payload: any) {
 export interface MainApp<A extends AppConfig, M extends MainConfig<A>> {
   /* Object returned by initMain. */
 
-  app: App,
+  app: App
   isMacOS: boolean
   isDevelopment: boolean
   managers: Record<keyof A["data"], VersionedManager<any, any>>
