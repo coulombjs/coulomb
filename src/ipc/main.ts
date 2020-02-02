@@ -11,8 +11,8 @@ import { reviveJsonValue } from './utils';
 
 
 export type Handler<I extends object, O extends object> = (params: I) => Promise<O>;
-export function listen<I extends object, O extends object>(
-    name: string, handler: Handler<I, O>) {
+export function listen<I extends object, O extends object>
+(name: string, handler: Handler<I, O>) {
   /* Defines an API endpoint with I input and O output types.
      Takes endpoint name and handler function.
 
