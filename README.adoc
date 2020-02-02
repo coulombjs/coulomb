@@ -1,0 +1,34 @@
+= Coulomb
+
+Coulomb is a framework for building cross-platform GUIs
+for structured data entry using TypeScript, React, and Electron.
+
+== Demo
+
+To be added.
+
+== Installation & usage
+
+Being in early alpha, the project is not distributed through NPM yet.
+
+Add the following runtime requirement to your package.json
+(for `current_version`, replace it with latest version per repository tags):
+
+[source]
+----
+"coulomb": "https://github.com/riboseinc/coulomb#coulomb-<current_version>-gitpkg",
+----
+
+== Release process
+
+Make sure you have `gitkpg` globally installed (`yarn global add gitpkg`).
+
+From repository root:
+
+[source,sh]
+----
+# Edit dist/package-dist.json to increment version and (if changed) port dependencies from main packgage.json
+yarn
+cd dist
+gitpkg publish
+----
