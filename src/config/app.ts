@@ -2,6 +2,7 @@ import { WindowOpenerParams } from '../main/window';
 
 
 export interface Window {
+  // The component ID will be assumed to be window name (ID) in config.
   openerParams: Omit<WindowOpenerParams, 'component'>,
 }
 
