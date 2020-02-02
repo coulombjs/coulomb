@@ -4,7 +4,7 @@ import AsyncLock from 'async-lock';
 import { ipcRenderer } from 'electron';
 import { useEffect, useState } from 'react';
 
-import { reviveJsonValue } from '../api/utils';
+import { reviveJsonValue } from './utils';
 
 
 type IPCResponse<O> = {
