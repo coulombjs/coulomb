@@ -62,6 +62,7 @@ implements VersionedFilesystemBackend {
 
   constructor(private opts: BackendOptions, private reportBackendStatus: BackendStatusReporter) {
     this.fs = new YAMLDirectoryWrapper(this.opts.workDir);
+    // TODO: Supply specific FS wrapper implementation via options
 
     this.git = new IsoGitWrapper(
       fs,
