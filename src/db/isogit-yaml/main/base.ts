@@ -75,10 +75,6 @@ implements VersionedFilesystemBackend {
     this.managers = [];
 
     this.synchronize = this.synchronize.bind(this);
-
-    // this.collections = Object.entries(this.opts.collections).map(([collectionID, collectionOptions]) => {
-    //   return { [collectionID]: { index: {}, opts: collectionOptions } } as Partial<Collections>;
-    // }).reduce((val, acc) => ({ ...acc, ...val }), {} as Partial<Collections>) as Collections;
   }
 
   public static registerSettingsForConfigurableOptions(
