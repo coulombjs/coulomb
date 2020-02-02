@@ -45,10 +45,14 @@ export function listen<I extends object, O extends object>
 
 
 export function unlisten(eventName: string, handler: Handler<any, any>) {
+  /* Removes event listener created with listen(). */
   return ipcMain.removeListener(eventName, handler);
 }
 
 
+// See also ipc.renderer.useIPCWindowEventRelayer().
+// Used if one window needs to notify other windows.
+// NOTE: Generally discouraged, somewhat of a crutch.
 listen<{ eventName: string, payload?: any }, { success: true }>
 ('relay-event-to-all-windows', async ({ eventName, payload }) => {
   await notifyAllWindows(eventName, payload);
