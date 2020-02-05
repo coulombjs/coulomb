@@ -42,6 +42,8 @@ export const renderApp = async <A extends AppConfig, C extends RendererConfig<A>
     // Show loading indicator while components are being resolved
     ReactDOM.render(<Spinner />, appRoot);
 
+    const RendererConfigContext = React.createContext<C>(config);
+
     // Get props prescribed for each context provider component
     var ctxProviderOptions = config.contextProviders.map(item => item.opts);
 
@@ -83,6 +85,14 @@ export const renderApp = async <A extends AppConfig, C extends RendererConfig<A>
     }
 
     log.debug("C/renderApp: Rendering");
+
+    // Wrap the app into top-level context
+    // offering renderer config values
+    appMarkup = (
+      <RendererConfigContext.Provider value={config}>
+        {appMarkup}
+      </RendererConfigContext.Provider>
+    );
 
     // Render the JSX
     ReactDOM.render(appMarkup, appRoot);
