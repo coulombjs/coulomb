@@ -103,8 +103,8 @@ export interface VersionedManager<M extends Model, IDType extends AnyIDType> {
   // but `commit` argument is VersionedBackend-specific.
 
   create(obj: M, commit: boolean | string): Promise<void>
-  update(objID: IDType, obj: M, commit: boolean | string): Promise<void>;
-  delete(objID: IDType, commit: boolean | string): Promise<void>;
+  update(objID: IDType, obj: M, commit: boolean | string): Promise<void>
+  delete(objID: IDType, commit: boolean | string): Promise<void>
 
   // Below methods are VersionedBackend-specific.
 
