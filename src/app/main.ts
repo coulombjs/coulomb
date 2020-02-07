@@ -6,16 +6,17 @@ import { app, App } from 'electron';
 import * as log from 'electron-log';
 
 import { AppConfig, Window } from '../config/app';
+
 import { MainConfig } from '../config/main';
 import { SettingManager } from '../settings/main';
 import { notifyAllWindows } from '../main/window';
 import {
   Backend,
-  VersionedManager,
+  ModelManager,
   BackendClass as DatabaseBackendClass,
 } from '../db/main/base';
 
-import { listen, unlisten, Handler, makeWindowEndpoint } from '../ipc/main';
+import { makeWindowEndpoint } from '../ipc/main';
 import { openWindow, closeWindow } from '../main/window';
 
 
@@ -23,6 +24,9 @@ export let main: MainApp<any, any>;
 
 
 export const initMain = async <C extends MainConfig<any>>(config: C): Promise<MainApp<any, C>> => {
+
+  // Prevent windows from closing while app is initialized
+  app.on('window-all-closed', (e: any) => e.preventDefault());
 
   log.catchErrors({ showDialog: true });
 
@@ -53,7 +57,13 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     });
   }
 
-  function _requestSettings(settings: string[]): Promise<void> {
+  function _closeWindow(windowName: keyof typeof config.app.windows) {
+    log.verbose(`C/main: Closing window ${String(windowName)}`);
+
+    closeWindow(config.app.windows[windowName].openerParams.title);
+  }
+
+  function _requestSettings(settingIDs: string[]): Promise<void> {
     /* Open settings window, prompting the user
        to fill in parameters required for application
        to perform a function.
@@ -63,32 +73,26 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     const settingsWindow = config.app.windows[config.app.settingsWindowID];
     if (settingsWindow) {
       return new Promise<void>(async (resolve, reject) => {
-        var resolvedSettings: { [key: string]: any } = {};
 
-        const handleSetting: Handler<{ name: string, value: any }, {}> = async function ({ name, value }) {
-          if (settings.indexOf(name) >= 0) {
-            // If we got a value for one of our requested settings,
-            // check if all requested settings have defined values
-            // (close settings window & resolve promise if they do).
-            resolvedSettings[name] = value;
+        const openedWindow = await _openWindow(
+          config.app.settingsWindowID,
+          `requiredSettings=${settingIDs.join(',')}`);
 
-            const allSettingsResolved =
-              settings.filter(s => resolvedSettings[s] === undefined).length < 1;
-
-            if (allSettingsResolved) {
-              unlisten('commitSetting', handleSetting);
-              await closeWindow(settingsWindow.openerParams.title);
-              resolve();
-            } else {
-              log.verbose(
-                "C/main: Specified setting value, remaining required settings exist",
-                settings.filter(s => resolvedSettings[s] === undefined))
-            }
+        openedWindow.on('closed', () => {
+          const missingRequiredSettings = settingIDs.
+            map((settingID) =>  settings.getValue(settingID)).
+            filter((settingVal) => settingVal === undefined);
+          if (missingRequiredSettings.length > 0) {
+            log.warn(
+              "C/main: User closed settings window with missing settings left",
+              missingRequiredSettings)
+            reject();
+          } else {
+            log.verbose("C/main: User provider all missing settings")
+            resolve();
           }
-          return {};
-        }
-        listen('commitSetting', handleSetting);
-        await _openWindow(config.app.settingsWindowID, `requiredSettings=${settings.join(',')}`);
+        })
+
       });
     } else {
       throw new Error("Settings were requested, but settings window is not specified");
@@ -103,11 +107,12 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   // Catch unhandled errors in electron-log
   log.catchErrors({ showDialog: true });
 
+  await app.whenReady();
+
   // Show splash window, if configured
   const splashWindow = config.app.windows[config.app.splashWindowID];
   if (splashWindow) {
-    // Can’t display splash screen before the app is ready, though
-    app.whenReady().then(() => { _openWindow(config.app.splashWindowID); });
+    _openWindow(config.app.splashWindowID);
   }
 
   const isMacOS = process.platform === 'darwin';
@@ -121,12 +126,12 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 
   log.debug("C/initMain: DB: Reading backend config", config.databases);
 
-  let dbBackendClasses: {
+  type BackendInfo = {
     dbName: string
     backendClass: DatabaseBackendClass<any, any, any>
     backendOptions: any
-  }[];
-
+  };
+  let dbBackendClasses: BackendInfo[];
   dbBackendClasses = (await Promise.all(Object.entries(config.databases).map(
     async ([dbName, dbConf]) => {
       log.debug("C/initMain: DB: Reading backend config", dbName, dbConf);
@@ -183,7 +188,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 
         const backend = new DBBackendClass(
            options,
-           (payload: any) => reportBackendStatusToAllWindows(`db-${dbName}`, payload));
+           async (payload: any) => await reportBackendStatusToAllWindows(dbName, payload));
 
         if (backend.setUpIPC) {
           backend.setUpIPC(dbName);
@@ -225,33 +230,32 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   .reduce((val, acc) => ({ ...acc, ...val }), {} as Partial<Managers>) as Managers;
 
 
-  app.whenReady()
-  .then(() => {
-    // Close splash window before opening the default window
-    closeWindow(splashWindow.openerParams.title);
+  // Initialize window-opening endpoints
+  for (const [windowName, window] of Object.entries(config.app.windows)) {
+    makeWindowEndpoint(windowName, () => ({
+      ...(window as Window).openerParams,
+      component: windowName,
+    }));
+  }
 
-    _openWindow('default');
+  // Open main window
+  await _openWindow('default');
 
-    // DB backend initialization happens after the app is ready,
-    // since it may require user input (and hence GUI interaction)
-    // of sensitive data not suitable for settings,
-    // namely authentication keys if data source requires auth.
-    // TODO: Teaching the framework to encrypt settings
-    // might let us make authentication data entry
-    // part of required settings entry
-    // and start data source initialization early.
-    for (const backend of Object.values(databases)) {
-      backend.init();
-    }
+  // DB backend initialization happens after the app is ready,
+  // since it may require user input (and hence GUI interaction)
+  // of sensitive data not suitable for settings,
+  // namely authentication keys if data source requires auth.
+  // TODO: Teaching the framework to encrypt settings
+  // might let us make authentication data entry
+  // part of required settings entry
+  // and start data source initialization early.
+  for (const backend of Object.values(databases)) {
+    await backend.init();
+  }
 
-    // Initialize window-opening endpoints
-    for (const [windowName, window] of Object.entries(config.app.windows)) {
-      makeWindowEndpoint(windowName, () => ({
-        ...(window as Window).openerParams,
-        component: windowName,
-      }));
-    }
-  });
+  if (splashWindow) {
+    _closeWindow(config.app.splashWindowID);
+  }
 
   main = {
     app,
@@ -266,7 +270,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 };
 
 
-async function reportBackendStatusToAllWindows(dbName: string, payload: any) {
+async function reportBackendStatusToAllWindows(dbName: string, payload: object) {
   return await notifyAllWindows(`db-${dbName}-status`, payload);
 }
 
@@ -277,7 +281,7 @@ export interface MainApp<A extends AppConfig, M extends MainConfig<A>> {
   app: App
   isMacOS: boolean
   isDevelopment: boolean
-  managers: Record<keyof A["data"], VersionedManager<any, any>>
+  managers: Record<keyof A["data"], ModelManager<any, any>>
   databases: Record<keyof M["databases"], Backend>
   openWindow: (windowName: keyof A["windows"]) => void
 }

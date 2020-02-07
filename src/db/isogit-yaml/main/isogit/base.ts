@@ -4,13 +4,24 @@ import AsyncLock from 'async-lock';
 import * as git from 'isomorphic-git';
 import * as log from 'electron-log';
 
-import { BackendStatusReporter } from '../base';
-
+import { GitStatus } from '../../base';
 import { GitAuthentication } from './types';
 
 
 const UPSTREAM_REMOTE = 'upstream';
 const MAIN_REMOTE = 'origin';
+
+
+const INITIAL_STATUS: GitStatus = {
+  isOnline: false,
+  isMisconfigured: false,
+  hasLocalChanges: false,
+  needsPassword: false,
+  statusRelativeToLocal: undefined,
+  lastSynchronized: null,
+  isPushing: false,
+  isPulling: false,
+}
 
 
 export class IsoGitWrapper {
@@ -19,12 +30,17 @@ export class IsoGitWrapper {
 
   private stagingLock: AsyncLock;
 
+  private status: GitStatus;
+
   constructor(
       private fs: any,
       private repoUrl: string,
       private upstreamRepoUrl: string,
+      username: string,
+      private author: { name: string, email: string },
       public workDir: string,
-      private corsProxy: string) {
+      private corsProxy: string,
+      private statusReporter: (payload: GitStatus) => Promise<void>) {
 
     git.plugins.set('fs', fs);
 
@@ -34,7 +50,31 @@ export class IsoGitWrapper {
     this.synchronize = this.synchronize.bind(this);
     this.resetFiles = this.resetFiles.bind(this);
     this.checkUncommitted = this.checkUncommitted.bind(this);
+
+    this.auth.username = username;
+
+    this.status = INITIAL_STATUS;
   }
+
+
+  // Reporting Git status to DB backend,
+  // so that it can be reflected in the GUI
+
+  private async reportStatus() {
+    return await this.statusReporter(this.status);
+  }
+
+  private async setStatus(status: Partial<GitStatus>) {
+    Object.assign(this.status, status);
+    await this.reportStatus();
+  }
+
+  public getStatus(): GitStatus {
+    return this.status;
+  }
+
+
+  // Initilaization
 
   public async isInitialized(): Promise<boolean> {
     let hasGitDirectory: boolean;
@@ -56,59 +96,67 @@ export class IsoGitWrapper {
     return (this.auth.password || '').trim() === '';
   }
 
+  public getUsername(): string | undefined {
+    return this.auth.username;
+  }
+
+  public async destroy() {
+    log.warn("C/db/isogit: Initialize: Removing data directory");
+    await this.fs.remove(this.workDir);
+  }
+
   public async forceInitialize() {
     /* Initializes from scratch: wipes work directory, clones repository, adds remotes. */
 
-    log.warn("C/db/isogit: Force initializing");
-    log.warn("C/db/isogit: Initialize: Removing data directory");
-
-    await this.fs.remove(this.workDir);
+    log.warn("C/db/isogit: Initialize");
 
     log.silly("C/db/isogit: Initialize: Ensuring data directory exists");
-
     await this.fs.ensureDir(this.workDir);
 
     log.verbose("C/db/isogit: Initialize: Cloning", this.repoUrl);
 
-    await git.clone({
-      dir: this.workDir,
-      url: this.repoUrl,
-      ref: 'master',
-      singleBranch: true,
-      depth: 5,
-      corsProxy: this.corsProxy,
-      ...this.auth,
-    });
+    try {
+      await git.clone({
+        dir: this.workDir,
+        url: this.repoUrl,
+        ref: 'master',
+        singleBranch: true,
+        depth: 5,
+        corsProxy: this.corsProxy,
+        ...this.auth,
+      });
 
-    await git.addRemote({
-      dir: this.workDir,
-      remote: UPSTREAM_REMOTE,
-      url: this.upstreamRepoUrl,
-    });
+      log.debug("C/db/isogit: Initialize: Adding upstream remote", this.repoUrl);
+      await git.addRemote({
+        dir: this.workDir,
+        remote: UPSTREAM_REMOTE,
+        url: this.upstreamRepoUrl,
+      });
+
+    } catch (e) {
+      await this.fs.remove(this.workDir);
+      await this._handleGitError(e);
+    }
   }
 
-  public async configSet(prop: string, val: string) {
-    log.verbose("C/db/isogit: Set config");
-    await git.config({ dir: this.workDir, path: prop, value: val });
-  }
 
-  public async configGet(prop: string): Promise<string> {
-    log.verbose("C/db/isogit: Get config", prop);
-    return await git.config({ dir: this.workDir, path: prop });
-  }
+  // Authentication
 
   public setPassword(value: string | undefined) {
     this.auth.password = value;
   }
 
-  async loadAuth() {
-    /* Configure auth with git-config username, if set.
-       Supposed to be happening automatically? Maybe not.
-       This method must be manually called before making operations that need auth. */
-    const username = await this.configGet('credentials.username');
-    if (username) {
-      this.auth.username = username;
-    }
+
+  // Git operations
+
+  async configSet(prop: string, val: string) {
+    log.verbose("C/db/isogit: Set config");
+    await git.config({ dir: this.workDir, path: prop, value: val });
+  }
+
+  async configGet(prop: string): Promise<string> {
+    log.verbose("C/db/isogit: Get config", prop);
+    return await git.config({ dir: this.workDir, path: prop });
   }
 
   async pull() {
@@ -144,7 +192,7 @@ export class IsoGitWrapper {
     return await git.commit({
       dir: this.workDir,
       message: msg,
-      author: {},  // git-config values will be used
+      author: this.author,
     });
   }
 
@@ -288,37 +336,37 @@ export class IsoGitWrapper {
     await git.remove({ dir: this.workDir, filepath: '.' });
   }
 
-  private async _handleGitError(
-    sendRemoteStatus: BackendStatusReporter,
-    e: Error & { code: string },
-  ): Promise<void> {
+  private async _handleGitError(e: Error & { code: string }): Promise<void> {
+    log.debug("Handling Git error", e);
+
     if (e.code === 'FastForwardFail' || e.code === 'MergeNotSupportedFail') {
       // NOTE: There’s also PushRejectedNonFastForward, but it seems to be thrown
       // for unrelated cases during push (false positive).
       // Because of that false positive, we ignore that error and instead do pull first,
       // catching actual fast-forward fails on that step before push.
-      await sendRemoteStatus({ statusRelativeToLocal: 'diverged' });
+      await this.setStatus({ statusRelativeToLocal: 'diverged' });
     } else if (['MissingUsernameError', 'MissingAuthorError', 'MissingCommitterError'].indexOf(e.code) >= 0) {
-      await sendRemoteStatus({ isMisconfigured: true });
+      await this.setStatus({ isMisconfigured: true });
     } else if (
         e.code === 'MissingPasswordTokenError'
         || (e.code === 'HTTPError' && e.message.indexOf('Unauthorized') >= 0)) {
+      log.warn("Password input required");
       this.setPassword(undefined);
-      await sendRemoteStatus({ needsPassword: true });
+      await this.setStatus({ needsPassword: true });
     }
   }
 
-  public async checkUncommitted(sendRemoteStatus: BackendStatusReporter): Promise<boolean> {
+  public async checkUncommitted(): Promise<boolean> {
     /* Checks for any uncommitted changes locally present.
        Notifies all windows about the status. */
 
     log.debug("C/db/isogit: Checking for uncommitted changes");
     const hasUncommittedChanges = (await this.listChangedFiles()).length > 0;
-    await sendRemoteStatus({ hasLocalChanges: hasUncommittedChanges });
+    await this.setStatus({ hasLocalChanges: hasUncommittedChanges });
     return hasUncommittedChanges;
   }
 
-  public async synchronize(sendRemoteStatus: BackendStatusReporter): Promise<void> {
+  public async synchronize(): Promise<void> {
     /* Checks for connection, local changes and unpushed commits,
        tries to push and pull when there’s opportunity.
 
@@ -328,44 +376,47 @@ export class IsoGitWrapper {
     return await this.stagingLock.acquire('1', async () => {
       log.verbose("C/db/isogit: Starting sync");
 
-      const hasUncommittedChanges = await this.checkUncommitted(sendRemoteStatus);
+      const isOnline = (await checkOnlineStatus()) === true;
 
-      if (!hasUncommittedChanges) {
+      if (isOnline) {
+        const needsPassword = this.needsPassword();
+        await this.setStatus({ needsPassword });
+        if (needsPassword) {
+          return;
+        }
 
-        const isOffline = (await checkOnlineStatus()) === false;
-        await sendRemoteStatus({ isOffline });
+        if (!(await this.isInitialized())) {
+          await this.forceInitialize();
+        }
 
-        if (!isOffline) {
+        await this.setStatus({ isOnline: true });
 
-          const needsPassword = this.needsPassword();
-          await sendRemoteStatus({ needsPassword });
-          if (needsPassword) {
-            return;
-          }
+        const hasUncommittedChanges = await this.checkUncommitted();
 
-          await sendRemoteStatus({ isPulling: true });
+        if (!hasUncommittedChanges) {
+          await this.setStatus({ isPulling: true });
           try {
             await this.pull();
           } catch (e) {
             log.error(e);
-            await sendRemoteStatus({ isPulling: false });
-            await this._handleGitError(sendRemoteStatus, e);
+            await this.setStatus({ isPulling: false });
+            await this._handleGitError(e);
             return;
           }
-          await sendRemoteStatus({ isPulling: false });
+          await this.setStatus({ isPulling: false });
 
-          await sendRemoteStatus({ isPushing: true });
+          await this.setStatus({ isPushing: true });
           try {
             await this.push();
           } catch (e) {
             log.error(e);
-            await sendRemoteStatus({ isPushing: false });
-            await this._handleGitError(sendRemoteStatus, e);
+            await this.setStatus({ isPushing: false });
+            await this._handleGitError(e);
             return;
           }
-          await sendRemoteStatus({ isPushing: false });
+          await this.setStatus({ isPushing: false });
 
-          await sendRemoteStatus({
+          await this.setStatus({
             statusRelativeToLocal: 'updated',
             isMisconfigured: false,
             needsPassword: false,

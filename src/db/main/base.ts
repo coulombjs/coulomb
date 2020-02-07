@@ -1,15 +1,19 @@
 import { AnyIDType, Model } from '../models';
 import { SettingManager } from '../../settings/main';
 import { Index } from '../query';
+import { BackendDescription } from '../base';
+import { listen } from '../../ipc/main';
 
 
 // Generic backend.
 
-export interface Backend<IDType = AnyIDType> {
-  init(): Promise<void>
+export abstract class Backend<IDType = AnyIDType> {
+  abstract init(): Promise<void>
   /* Initializes the backend.
      This may involve loading data from remote storage,
      thus initial authentication, etc. */
+
+  abstract describe(): Promise<BackendDescription<any>>
 
   // Following are data query & update methods.
   // One DB may operate a heterogeneous collection of objects.
@@ -21,31 +25,39 @@ export interface Backend<IDType = AnyIDType> {
   // the app would query data objects via corresponding manager,
   // which in turn would call these methods
   // filling in appropriate arguments.
-  readAll<T extends Record<string, any>>(...args: any[]): Promise<Index<T>>
-  read(objID: IDType, ...args: any[]): Promise<object>
-  create<T extends Record<string, any>>(obj: T, ...args: any[]): Promise<void>
-  update<T extends Record<string, any>>(objID: IDType, obj: T, ...args: any[]): Promise<void>
-  delete(objID: IDType, ...args: any[]): Promise<void>
+  abstract getIndex(idField: string, ...args: any[]): Promise<Index<any>>
+  abstract read(objID: IDType, ...args: any[]): Promise<object>
+  abstract create(obj: object, ...args: any[]): Promise<void>
+  abstract update(objID: IDType, obj: object, ...args: any[]): Promise<void>
+  abstract delete(objID: IDType, ...args: any[]): Promise<void>
 
-  setUpIPC?(dbID: string): void
-  /* Initializes IPC endpoints to enable e.g. to configure the database
-     or invoke specific utility methods from within app’s renderer process. */
+  setUpIPC(dbID: string): void {
+    /* Initializes IPC endpoints to enable the user to e.g. configure the data store
+       or invoke housekeeping or utility routines. */
+
+    const prefix = `db-${dbID}`;
+
+    listen<{}, BackendDescription<any>>
+    (`${prefix}-describe`, async () => {
+      return await this.describe();
+    });
+  }
 }
 
 
-export interface BackendStatus {
-  isMisconfigured: boolean
-}
-
-export type BackendStatusReporter<Status extends BackendStatus> = (payload: Partial<Status>) => void;
+export type BackendStatusReporter<Status> =
+(payload: Partial<Status>) => Promise<void>;
+/* Function of this signature will be passed to backend constructor,
+   to be called when backend needs to report status to app windows. */
 
 
 export interface BackendClass<
     InitialOptions extends object,
     Options extends InitialOptions,
-    Status extends BackendStatus> {
+    Status extends object> {
   /* Initial options are supplied by the developer.
      Full options include options configurable by the user, some of which may be required.
+
      NOTE: By “Option”, backend constructor parameter is meant.
      TODO: This is a misnomer since some of those are non-optional. */
 
@@ -53,8 +65,7 @@ export interface BackendClass<
     options: Options,
     reportBackendStatus: BackendStatusReporter<Status>,
   ): Backend
-  // Constructor signature.
-  // Backend constructor is invoked by the framework during app initialization.
+  // Backend classes are instantiated by the framework during app initialization.
 
   registerSettingsForConfigurableOptions?(
     settings: SettingManager,
@@ -77,42 +88,46 @@ export interface BackendClass<
 
 // Versioned backend & compatible manager.
 
-export interface VersionedBackend<T = object, IDType = AnyIDType> extends Backend<IDType> {
+export abstract class VersionedBackend<IDType = AnyIDType> extends Backend<IDType> {
 
-  discard(objIDs: IDType[]): Promise<void>
+  abstract discard(objIDs: IDType[]): Promise<void>
   /* Discard any uncommitted changes made to objects with specified IDs. */
 
-  commit(objIDs: IDType[], commitMessage: string): Promise<void>
+  abstract commit(objIDs: IDType[], commitMessage: string): Promise<void>
   /* Commit any uncommitted changes made to objects with specified IDs,
      with specified commit message. */
 
-  listUncommitted?(): Promise<IDType[]>
+  abstract listUncommitted?(): Promise<IDType[]>
   /* List IDs of objects with uncommitted changes. */
 
 }
 
 
-export interface VersionedManager<M extends Model, IDType extends AnyIDType> {
-  /* Passes calls on to corresponding Backend or VersionedBackend methods,
+export abstract class ModelManager<M extends Model, IDType extends AnyIDType> {
+  /* Passes calls on to corresponding Backend (or subclass) methods,
      but limits their scope only to objects manipulated by this manager. */
 
-  setUpIPC?(modelName: string): void
-  /* Initializes IPC endpoints to query or update managed data. */
+  abstract readAll(query: object): Promise<Index<M>>
+  abstract read(id: IDType): Promise<M>
+  abstract create(obj: M, ...args: any[]): Promise<void>
+  abstract update(objID: IDType, obj: M, ...args: any[]): Promise<void>
+  abstract delete(objID: IDType, ...args: unknown[]): Promise<void>
 
-  // Below methods apply to any Backend and could be moved to a generic Manager,
-  // but `commit` argument is VersionedBackend-specific.
+  setUpIPC(modelName: string) {
+    /* Initializes IPC endpoints to query or update data objects. */
 
-  create(obj: M, commit: boolean | string): Promise<void>
-  update(objID: IDType, obj: M, commit: boolean | string): Promise<void>
-  delete(objID: IDType, commit: boolean | string): Promise<void>
+    const prefix = `model-${modelName}`;
 
-  // Below methods are VersionedBackend-specific.
+    listen<{}, Index<M>>
+    (`${prefix}-read-all`, async () => {
+      return await this.readAll({});
+    });
 
-  discard?(objIDs: IDType[]): Promise<void>
-  commit?(objIDs: IDType[], commitMessage: string): Promise<void>
-
-  listUncommitted?(): Promise<IDType[]>
-  /* List IDs of objects with uncommitted changes. */
+    listen<{ objectID: IDType }, M>
+    (`${prefix}-read-one`, async ({ objectID }) => {
+      return await this.read(objectID);
+    });
+  }
 }
 
 
@@ -124,11 +139,14 @@ export class CommitError extends Error {
 }
 
 
-// Versioned backend specifically based on local filesystem, and compatible manager.
+// Versioned backend specifically based on local filesystem,
+// and requisite manager interface
 
-export interface VersionedFilesystemBackend extends VersionedBackend<object, string> {
+export abstract class VersionedFilesystemBackend extends VersionedBackend<string> {
 
-  registerManager(manager: VersionedFilesystemManager): void
+  abstract getIndex(idField: string, subdir: string): Promise<Index<any>>
+
+  abstract registerManager(manager: FilesystemManager): void
   /* Enables instances of this backend to keep track of managers,
      which is required for the purpose of excluding files
      created arbitrarily by OS or other software
@@ -141,13 +159,13 @@ export interface VersionedFilesystemBackend extends VersionedBackend<object, str
      Avoiding this dependency on managers
      would be beneficial, if there’s an elegant way of doing it. */
 
-  resetOrphanedFileChanges(): Promise<void>
+  abstract resetOrphanedFileChanges(): Promise<void>
   /* Housekeeping method for file-based DB backend. */
 
 }
 
 
-export interface VersionedFilesystemManager {
+export interface FilesystemManager {
   managesFileAtPath(filePath: string): boolean
   /* Determines whether the manager instance is responsible for the file
      under given path. */

@@ -7,15 +7,21 @@ export interface Window {
 }
 
 
-export interface ModelConfig {
+export interface ModelInfo {
   shortName: string,
   verboseName: string,
   verboseNamePlural: string,
 }
 
 
+export interface DatabaseInfo {
+  verboseName: string,
+}
+
+
 export interface AppConfig {
-  data: Record<string, ModelConfig>
+  data: Record<string, ModelInfo>
+  databases: Record<string, DatabaseInfo>
 
   windows: {
     default: Window

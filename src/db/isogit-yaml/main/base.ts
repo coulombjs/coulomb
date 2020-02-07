@@ -1,21 +1,22 @@
 import * as log from 'electron-log';
 import * as fs from 'fs-extra';
 
-import { ipcMain } from 'electron';
-
 import { listen } from '../../../ipc/main';
 import { Setting, SettingManager } from '../../../settings/main';
 
 import { Index } from '../../query';
 import { UniqueConstraintError } from '../../errors';
 
+import { FilesystemWrapper } from '../../main/fs-wrapper';
+
 import {
   BackendClass,
-  BackendStatus as BaseBackendStatus,
   BackendStatusReporter as BaseBackendStatusReporter,
   VersionedFilesystemBackend,
-  VersionedFilesystemManager,
+  FilesystemManager,
 } from '../../main/base';
+
+import { BackendDescription, BackendStatus } from '../base';
 
 import { YAMLDirectoryWrapper } from './yaml';
 import { IsoGitWrapper } from './isogit';
@@ -27,7 +28,6 @@ export interface FixedBackendOptions {
   corsProxyURL: string
   upstreamRepoURL: string
 }
-
 export interface ConfigurableBackendOptions {
   /* Settings that user can or must specify */
   repoURL: string
@@ -35,32 +35,27 @@ export interface ConfigurableBackendOptions {
   authorName: string
   authorEmail: string
 }
-
 export type BackendOptions = FixedBackendOptions & ConfigurableBackendOptions
-
 export type InitialBackendOptions = FixedBackendOptions & Partial<ConfigurableBackendOptions>
 
 
-export interface BackendStatus extends BaseBackendStatus {
-  isOffline: boolean
-  hasLocalChanges: boolean
-  needsPassword: boolean
-  statusRelativeToLocal: 'ahead' | 'behind' | 'diverged' | 'updated' | undefined
-  isPushing: boolean
-  isPulling: boolean
-}
 export type BackendStatusReporter = BaseBackendStatusReporter<BackendStatus>
 
 
 export const Backend: BackendClass<InitialBackendOptions, BackendOptions, BackendStatus> = class Backend
-implements VersionedFilesystemBackend {
+extends VersionedFilesystemBackend {
   /* Combines a filesystem storage with Git. */
 
   private git: IsoGitWrapper;
-  private fs: YAMLDirectoryWrapper;
-  private managers: VersionedFilesystemManager[];
+  private fs: FilesystemWrapper<any>;
+  private managers: FilesystemManager[];
 
-  constructor(private opts: BackendOptions, private reportBackendStatus: BackendStatusReporter) {
+  constructor(
+      private opts: BackendOptions,
+      private reportBackendStatus: BackendStatusReporter) {
+
+    super();
+
     this.fs = new YAMLDirectoryWrapper(this.opts.workDir);
     // TODO: Supply specific FS wrapper implementation via options
 
@@ -68,13 +63,25 @@ implements VersionedFilesystemBackend {
       fs,
       this.opts.repoURL,
       this.opts.upstreamRepoURL,
+      this.opts.username,
+      { name: this.opts.authorName, email: this.opts.authorEmail },
       this.opts.workDir,
       this.opts.corsProxyURL,
+      this.reportBackendStatus,
     );
 
     this.managers = [];
 
     this.synchronize = this.synchronize.bind(this);
+  }
+
+  public async describe(): Promise<BackendDescription> {
+    return {
+      verboseName: "Git-versioned YAML file tree",
+      gitRepo: this.opts.repoURL,
+      gitUsername: this.opts.username,
+      status: this.git.getStatus(),
+    }
   }
 
   public static registerSettingsForConfigurableOptions(
@@ -156,7 +163,7 @@ implements VersionedFilesystemBackend {
     }
   }
 
-  public async registerManager(manager: VersionedFilesystemManager) {
+  public async registerManager(manager: FilesystemManager) {
     this.managers.push(manager);
   }
 
@@ -180,10 +187,10 @@ implements VersionedFilesystemBackend {
     }
 
     if (doInitialize) {
-      await this.git.forceInitialize();
+      await this.git.destroy();
     }
 
-    await this.git.loadAuth();
+    await this.synchronize();
   }
 
   public async read(objID: string, metaFields: string[]) {
@@ -232,8 +239,8 @@ implements VersionedFilesystemBackend {
     });
   }
 
-  public async readAll(idField: string) {
-    const objs = await this.fs.readAll();
+  public async getIndex(subdir: string, idField: string) {
+    const objs = await this.fs.readAll({ subdir });
     var idx: Index<any> = {};
     for (const obj of objs) {
       idx[`${obj[idField]}`] = obj;
@@ -280,41 +287,45 @@ implements VersionedFilesystemBackend {
   }
 
   private getRef(objID: string | number): string {
-    /* Returns FS backend reference given object ID. */
+    /* Returns FS backend reference from DB backend object ID. */
     return `${objID}`;
   }
 
-  private async synchronize() {
-    return await this.git.synchronize(this.reportBackendStatus);
+  private synchronize() {
+    this.git.synchronize();
   }
 
   private async checkUncommitted() {
-    return await this.git.checkUncommitted(this.reportBackendStatus);
+    return await this.git.checkUncommitted();
   }
 
   public setUpIPC(dbID: string) {
+    super.setUpIPC(dbID);
+
     log.verbose("C/db/isogit-yaml: Setting up IPC");
 
     const prefix = `db-${dbID}`;
 
-    ipcMain.on(`${prefix}-git-trigger-sync`, this.synchronize);
-    ipcMain.on(`${prefix}-git-discard-unstaged`, () => this.git.resetFiles() );
-    ipcMain.on(`${prefix}-git-update-status`, this.checkUncommitted);
+    listen<{}, { numUncommitted: number }>
+    (`${prefix}-count-uncommitted`, async () => {
+      return { numUncommitted: (await this.git.listChangedFiles()).length };
+    });
 
-    listen<{ name: string, email: string, username: string }, { success: true }>
-    (`${prefix}-git-config-set`, async ({ name, email, username }) => {
-      log.verbose("C/db/isogit-yaml: received git-config-set request");
-
-      await this.git.configSet('user.name', name);
-      await this.git.configSet('user.email', email);
-      await this.git.configSet('credentials.username', username);
-
-      await this.git.loadAuth();
-      // ^ this.git.auth.username = username
-
+    listen<{}, { started: true }>
+    (`${prefix}-git-trigger-sync`, async () => {
       this.synchronize();
+      return { started: true };
+    });
 
+    listen<{}, { success: true }>
+    (`${prefix}-git-discard-unstaged`, async () => {
+      await this.git.resetFiles();
       return { success: true };
+    });
+
+    listen<{}, { hasUncommittedChanges: boolean }>
+    (`${prefix}-git-update-status`, async () => {
+      return { hasUncommittedChanges: await this.checkUncommitted() };
     });
 
     listen<{ password: string }, { success: true }>

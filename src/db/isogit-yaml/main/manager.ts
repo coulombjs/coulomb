@@ -2,14 +2,14 @@ import * as path from 'path';
 
 import { listen } from '../../../ipc/main';
 
-import { ModelConfig } from '../../../config/app';
+import { ModelInfo } from '../../../config/app';
 import { ManagerOptions } from '../../../config/main';
 import { Model, AnyIDType } from '../../models';
 import { Index } from '../../query';
 import {
   VersionedFilesystemBackend,
-  VersionedManager,
-  VersionedFilesystemManager,
+  ModelManager,
+  FilesystemManager,
   CommitError,
 } from '../../main/base';
 
@@ -17,14 +17,15 @@ import { isGitError } from './isogit/base';
 
 
 class Manager<M extends Model, IDType extends AnyIDType>
-implements VersionedManager<M, IDType>, VersionedFilesystemManager {
-  /* Combines a filesystem storage with Git. */
+extends ModelManager<M, IDType> implements FilesystemManager {
 
   constructor(
       private db: VersionedFilesystemBackend,
       private managerConfig: ManagerOptions<M>,
-      private modelConfig: ModelConfig) {
-    db.registerManager(this as VersionedFilesystemManager);
+      private modelInfo: ModelInfo) {
+    super();
+
+    db.registerManager(this as FilesystemManager);
   }
 
   public managesFileAtPath(filePath: string) {
@@ -82,7 +83,9 @@ implements VersionedManager<M, IDType>, VersionedFilesystemManager {
   }
 
   public async readAll() {
-    var idx: Index<M> = await this.db.readAll(this.managerConfig.idField as string);;
+    var idx: Index<M> = await this.db.getIndex(
+      this.managerConfig.idField as string,
+      this.managerConfig.workDir);
     return idx;
   }
 
@@ -122,6 +125,8 @@ implements VersionedManager<M, IDType>, VersionedFilesystemManager {
           : this.formatCommitMessage(verb, objID, obj));
 
     } catch (e) {
+      // TODO: This is the only thing that makes this manager Git-specific.
+      // Get rid of it and make it generic!
       if (isGitError(e)) {
         throw new CommitError(e.code, e.message);
       } else {
@@ -135,7 +140,7 @@ implements VersionedManager<M, IDType>, VersionedFilesystemManager {
   }
 
   private formatCommitMessage(verb: string, objID: IDType, obj?: M) {
-    return `${verb} ${this.modelConfig.shortName} ${this.formatObjectName(objID, obj)}`;
+    return `${verb} ${this.modelInfo.shortName} ${this.formatObjectName(objID, obj)}`;
   }
 
   private getDBRef(objID: IDType): string {
@@ -158,17 +163,9 @@ implements VersionedManager<M, IDType>, VersionedFilesystemManager {
   }
 
   public setUpIPC(modelName: string) {
+    super.setUpIPC(modelName);
+
     const prefix = `model-${modelName}`;
-
-    listen<{}, Index<M>>
-    (`${prefix}-read-all`, async () => {
-      return await this.readAll();
-    });
-
-    listen<{ objectID: IDType }, M>
-    (`${prefix}-read-one`, async ({ objectID }) => {
-      return await this.read(objectID);
-    });
 
     listen<{}, IDType[]>
     (`${prefix}-read-uncommitted-ids`, async () => {

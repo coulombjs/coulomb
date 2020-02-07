@@ -16,6 +16,9 @@ export interface FilesystemWrapper<T> {
      object IDs would probably exclude filename extension.
      The Store using this backend would convert object IDs to */
 
+  // TODO: Make non-generic and operate on `any`,
+  // let other layers deal with narrower types (?)
+
   baseDir: string;
   /* Absolute path.
      Backend is not concerned with files outside this path.
@@ -23,7 +26,7 @@ export interface FilesystemWrapper<T> {
 
   read(objID: string, ...args: any[]): Promise<T>;
 
-  readAll(...args: any[]): Promise<T[]>;
+  readAll(query: { subdir?: string }, ...readArgs: any[]): Promise<T[]>;
   /* Scan filesystem and returns all the objects found. */
 
   write(objID: string, newData: T | undefined, ...args: any[]): Promise<FilesystemPath[]>;
@@ -84,12 +87,14 @@ export abstract class AbstractLockingFilesystemWrapper<T> implements FilesystemW
     return true;
   }
 
-  public async readAll(...args: any[]) {
-    const objIDs = await fs.readdir(this.baseDir);
+  public async readAll(query: { subdir?: string }, ...readArgs: any[]) {
+    const dir = query.subdir ? path.join(this.baseDir, query.subdir) : this.baseDir;
+
+    const objIDs = await fs.readdir(dir);
     var objs = [];
     for (const objID of objIDs) {
       if (await this.isValidID(objID)) {
-        objs.push(await this.read(objID, ...args));
+        objs.push(await this.read(objID, ...readArgs));
       }
     }
     return objs;

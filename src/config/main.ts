@@ -1,9 +1,9 @@
-import { AppConfig, ModelConfig } from './app';
+import { AppConfig, ModelInfo } from './app';
 import { Model } from '../db/models';
 import {
   BackendClass as DatabaseBackendClass,
   Backend as DatabaseBackend,
-  VersionedManager,
+  ModelManager,
 } from '../db/main/base';
 
 
@@ -37,7 +37,7 @@ interface DatabaseConfig {
 // Model managers
 
 export interface ManagerClass<M extends Model, DB extends DatabaseBackend> {
-  new (db: DB, managerConfig: ManagerOptions<M>, modelConfig: ModelConfig): VersionedManager<M, any>
+  new (db: DB, managerConfig: ManagerOptions<M>, modelInfo: ModelInfo): ModelManager<M, any>
 }
 
 export interface ManagerOptions<M extends Model> {

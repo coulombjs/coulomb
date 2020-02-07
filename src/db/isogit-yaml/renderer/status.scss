@@ -1,0 +1,19 @@
+:local .statusIcon {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+
+  // Center, really needed if BP3 Icon (not Button)
+  display: flex !important;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: center;
+}
+
+:local .backendStatus {
+  display: flex;
+  flex-flow: row nowrap;
+}
+
+:local .passwordPrompt {
+  padding: 1rem 1rem .01rem 1rem;
+}
