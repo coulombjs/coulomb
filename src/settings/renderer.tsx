@@ -5,7 +5,7 @@ import { Button, Label, Tabs, Tab, InputGroup } from '@blueprintjs/core';
 import { WindowComponentProps } from '../config/renderer';
 
 import { Pane, Setting } from '../settings/main';
-import { useIPCValue, useIPCRequest } from '../ipc/renderer';
+import { useIPCValue, callIPC } from '../ipc/renderer';
 
 
 interface SettingHook<T> {
@@ -31,7 +31,7 @@ export function useSetting<T>(name: string, initialValue: T): SettingHook<T> {
   }, [ipcValue.value]);
 
   async function commit() {
-    await useIPCRequest('commitSetting', { name, value: localValue });
+    await callIPC('commitSetting', { name, value: localValue });
     ipcValue.refresh();
   }
 

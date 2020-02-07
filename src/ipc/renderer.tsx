@@ -58,7 +58,7 @@ export function useIPCValue<I extends object, O>
 }
 
 
-export function useIPCRequest<I extends object, O>
+export async function callIPC<I extends object, O>
 (endpointName: string, payload?: I): Promise<O> {
   return ipcEndpointRequestLock.acquire(endpointName, async function () {
     const rawData = await ipcRenderer.invoke(endpointName, JSON.stringify(payload));
@@ -86,13 +86,13 @@ export function useIPCRequest<I extends object, O>
 }
 
 
-export async function useIPCWindowEventRelayer
+export async function relayIPCEvent
 <
   I extends object = { eventName: string, eventPayload?: any },
   O = { success: true },
 >
 (payload: I): Promise<O> {
-  return await useIPCRequest<I, O>('relay-event-to-all-windows', payload);
+  return await callIPC<I, O>('relay-event-to-all-windows', payload);
 }
 
 
