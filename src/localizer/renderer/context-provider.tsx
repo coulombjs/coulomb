@@ -2,16 +2,20 @@ import React, { useState } from 'react';
 
 import { SupportedLanguages } from '../types';
 import { LangConfigContext } from './context';
+import { ContextProviderConfig } from '../../config/renderer';
 
 
-type LocalizerOptions<Languages extends SupportedLanguages> = {
+export type LocalizerProps<Languages extends SupportedLanguages> = {
   available: Languages
   default: keyof Languages
   selected: keyof Languages
 };
 
 
-const LocalizerContextProvider: React.FC<LocalizerOptions<any>> = function (props) {
+export type LocalizerContextProviderConfig = ContextProviderConfig<LocalizerProps<any>>;
+
+
+const LocalizerContextProvider: React.FC<LocalizerProps<any>> = function (props) {
   const [langConfig, setLangConfig] = useState({
     available: props.available,
     default: props.default as string,
