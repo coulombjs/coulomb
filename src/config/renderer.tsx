@@ -11,10 +11,9 @@ export interface RendererConfig<App extends AppConfig> {
 }
 
 
-export interface ContextProviderConfig<O extends object> {
-  id: string
-  cls: () => Promise<{ default: React.FC<O> }>
-  opts: (config: RendererConfig<any>) => O
+export interface ContextProviderConfig<Props> {
+  cls: () => Promise<{ default: React.FC<Props> }>
+  getProps: (config: RendererConfig<any>) => Props
 }
 
 

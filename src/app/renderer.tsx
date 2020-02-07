@@ -43,13 +43,21 @@ export const renderApp = async <A extends AppConfig, C extends RendererConfig<A>
     ReactDOM.render(<Spinner />, appRoot);
 
     // Get props prescribed for each context provider component
-    var ctxProviderOptions = config.contextProviders.map(item => item.opts);
+    var ctxProviderProps = config.contextProviders.map(item => item.getProps(config));
+
+    log.silly(
+      `C/renderApp: Resolving components`,
+      componentImporter, config.contextProviders);
 
     // Resolve (import) components in parallel, first UI and then context providers
     const promisedComponents: { default: React.FC<any> }[] = await Promise.all([
       componentImporter(),
       ...config.contextProviders.map(async (ctxp) => await ctxp.cls()),
     ]);
+
+    log.silly(
+      `C/renderApp: Resolved components`,
+      promisedComponents);
 
     // Break down components into top-level window UI & context providers
     const TopWindowComponent = promisedComponents[0].default;
@@ -59,12 +67,12 @@ export const renderApp = async <A extends AppConfig, C extends RendererConfig<A>
 
     // Reorder context providers so that top-most is the most basic
     ctxProviderComponents.reverse();
-    ctxProviderOptions.reverse();
+    ctxProviderProps.reverse();
 
     // Write out top-level window component JSX
     var appMarkup = <TopWindowComponent query={searchParams} />;
 
-    log.debug(  
+    log.debug(
       `C/renderApp: Got context provider components`,
       ctxProviderComponents);
 
@@ -73,10 +81,10 @@ export const renderApp = async <A extends AppConfig, C extends RendererConfig<A>
       log.verbose(  
         `C/renderApp: Initializing context provider #${idx}`,
         ctxProviderComponents[idx],
-        ctxProviderOptions[idx]);
+        ctxProviderProps[idx]);
 
       appMarkup = (
-        <ContextProvider {...ctxProviderOptions[idx](config)}>
+        <ContextProvider {...ctxProviderProps[idx]}>
           {appMarkup}
         </ContextProvider>
       );
