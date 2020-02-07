@@ -179,7 +179,7 @@ function createWindow(title: string, url: string, winParams: any, ignoreCache: b
 
 
 export async function notifyAllWindows(eventName: string, payload?: any) {
-  return await Promise.all(windows.map(async (window) => {
+  await Promise.all(windows.map(async (window) => {
     if (window) {
       await window.webContents.send(eventName, payload);
     }
