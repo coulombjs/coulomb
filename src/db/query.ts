@@ -1,17 +1,7 @@
 import { Model } from './models';
 
 
-export interface Index<M extends Model> {
-  /* An index is a simple object
-     where each key is a stringified value of some property of object T,
-     and the value is assigned the corresponding object instance
-     for direct access.
-
-     The property in question must obviously not have duplicate values
-     across all objects. */
-
-  [stringifiedFieldValue: string]: M,
-}
+export type Index<M extends Model> = Record<string, M>;
 
 
 interface ArraySorter { (a: [string, unknown], b: [string, unknown]): number }
