@@ -16,7 +16,7 @@ Add the following runtime requirement to your package.json
 
 [source]
 ----
-"coulomb": "https://github.com/riboseinc/coulomb#coulomb-<current_version>-gitpkg",
+"coulomb": "https://github.com/coulombjs/coulomb#coulomb-<current_version>-gitpkg",
 ----
 
 == Release process
