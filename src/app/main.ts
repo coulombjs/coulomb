@@ -1,4 +1,4 @@
-// Jury-rig globa.fetch to make Isomorphic Git work under Node
+// Jury-rig global.fetch to make Isomorphic Git work under Node
 import fetch from 'node-fetch';
 (global as any).fetch = fetch;
 
