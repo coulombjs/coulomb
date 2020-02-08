@@ -22,11 +22,19 @@ import { YAMLDirectoryWrapper } from './yaml';
 import { IsoGitWrapper } from './isogit';
 
 
+const DEFAULT_SYNC_INTERVAL = 50000;
+
+
 export interface FixedBackendOptions {
   /* Settings supplied by the developer */
+
   workDir: string
   corsProxyURL: string
   upstreamRepoURL: string
+
+  syncInterval?: number
+  // How often to try to synchronize Git remote in background, in ms.
+  // Synchronization will be skipped if another one is already running.
 }
 export interface ConfigurableBackendOptions {
   /* Settings that user can or must specify */
@@ -47,6 +55,8 @@ extends VersionedFilesystemBackend {
   /* Combines a filesystem storage with Git. */
 
   private git: IsoGitWrapper;
+  private gitSyncIntervalDelay: number;
+  private gitSyncInterval: NodeJS.Timeout | null = null;
   private fs: FilesystemWrapper<any>;
   private managers: FilesystemManager[];
 
@@ -72,6 +82,7 @@ extends VersionedFilesystemBackend {
 
     this.managers = [];
 
+    this.gitSyncIntervalDelay = opts.syncInterval || DEFAULT_SYNC_INTERVAL;
     this.synchronize = this.synchronize.bind(this);
   }
 
@@ -191,6 +202,12 @@ extends VersionedFilesystemBackend {
     }
 
     await this.synchronize();
+
+    if (this.gitSyncInterval) {
+      clearInterval(this.gitSyncInterval);
+    }
+
+    this.gitSyncInterval = setInterval(this.synchronize, this.gitSyncIntervalDelay);
   }
 
   public async read(objID: string, metaFields: string[]) {
