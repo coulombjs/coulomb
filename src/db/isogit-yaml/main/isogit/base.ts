@@ -101,6 +101,9 @@ export class IsoGitWrapper {
   }
 
   public async destroy() {
+    /* Removes working directory.
+       On next sync Git repo will have to be reinitialized, cloned etc. */
+
     log.warn("C/db/isogit: Initialize: Removing data directory");
     await this.fs.remove(this.workDir);
   }
