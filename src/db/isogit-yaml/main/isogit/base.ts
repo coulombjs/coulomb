@@ -402,6 +402,7 @@ export class IsoGitWrapper {
 
         const hasUncommittedChanges = await this.checkUncommitted();
 
+        // Do not run pull if there are unstaged/uncommitted changes
         if (!hasUncommittedChanges) {
           await this.setStatus({ isPulling: true });
           try {
@@ -414,6 +415,7 @@ export class IsoGitWrapper {
           }
           await this.setStatus({ isPulling: false });
 
+          // Run push AFTER pull. May result in false-positive non-fast-forward rejection
           await this.setStatus({ isPushing: true });
           try {
             await this.push();
