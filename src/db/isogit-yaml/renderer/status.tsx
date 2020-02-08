@@ -60,6 +60,18 @@ const Status: React.FC<{ ipcPrefix: string, status: BackendStatus }> = function 
     statusIntent = "danger";
     action = () => openWindow('settings');
 
+  } else if (status.needsPassword) {
+    statusIcon = "lock";
+    tooltipText = "Remote storage is pending authentication";
+    statusIntent = "primary";
+    action = null;
+
+  } else if (status.isOnline !== true) {
+    statusIcon = "offline";
+    tooltipText = "No connection to remote storage";
+    statusIntent = "danger";
+    action = triggerSync;
+
   } else if (status.hasLocalChanges) {
     statusIcon = "git-commit";
     tooltipText = "Uncommitted local changes present—click to resolve";
@@ -74,18 +86,6 @@ const Status: React.FC<{ ipcPrefix: string, status: BackendStatus }> = function 
         openWindow('batch-commit');
       }
     }
-
-  } else if (status.needsPassword) {
-    statusIcon = "lock";
-    tooltipText = "Remote storage is pending authentication";
-    statusIntent = "primary";
-    action = null;
-
-  } else if (status.isOnline !== true) {
-    statusIcon = "offline";
-    tooltipText = "No connection to remote storage—click to retry";
-    statusIntent = "danger";
-    action = triggerSync;
 
   } else if (status.isPulling) {
     statusIcon = "cloud-download"
