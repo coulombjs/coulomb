@@ -375,7 +375,13 @@ export class IsoGitWrapper {
 
        Notifies all windows about the status in process. */
 
+    if (this.stagingLock.isBusy()) {
+      log.verbose("C/db/isogit: Lock is busy, skipping sync");
+      return;
+    }
+
     log.verbose("C/db/isogit: Queueing sync");
+
     return await this.stagingLock.acquire('1', async () => {
       log.verbose("C/db/isogit: Starting sync");
 
