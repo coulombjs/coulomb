@@ -1,4 +1,4 @@
-import * as dns from 'dns';
+import * as https from 'https';
 import * as path from 'path';
 import AsyncLock from 'async-lock';
 import * as git from 'isomorphic-git';
@@ -428,15 +428,33 @@ export class IsoGitWrapper {
 }
 
 
-async function checkOnlineStatus(): Promise<boolean> {
-  let isOffline: boolean;
-  try {
-    await dns.promises.lookup('github.com');
-    isOffline = false;
-  } catch (e) {
-    isOffline = true;
-  }
-  return !isOffline;
+async function checkOnlineStatus(timeout = 2500): Promise<boolean> {
+  // TODO: Move to general utility functions
+  return new Promise((resolve) => {
+    log.debug("C/db/isogit: Connection test: Starting");
+
+    const req = https.get('https://github.com/', { timeout }, reportOnline);
+
+    req.on('error', () => req.abort());
+    req.on('response', reportOnline);
+    req.on('connect', reportOnline);
+    req.on('continue', reportOnline);
+    req.on('upgrade', reportOnline);
+    req.on('timeout', reportOffline);
+
+    req.end();
+
+    function reportOffline() {
+      log.warn("C/db/isogit: Connection test: Report offline");
+      req.abort();
+      resolve(false);
+    }
+    function reportOnline() {
+      log.info("C/db/isogit: Connection test: Report online");
+      req.abort();
+      resolve(true);
+    }
+  });
 }
 
 
