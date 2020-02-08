@@ -108,7 +108,7 @@ export class IsoGitWrapper {
     await this.fs.remove(this.workDir);
   }
 
-  public async forceInitialize() {
+  private async forceInitialize() {
     /* Initializes from scratch: wipes work directory, clones repository, adds remotes. */
 
     log.warn("C/db/isogit: Initialize");
