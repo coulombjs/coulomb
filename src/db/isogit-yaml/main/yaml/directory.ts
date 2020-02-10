@@ -1,18 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import * as yaml from 'js-yaml';
-
-import { AbstractLockingFilesystemWrapper } from '../../../main/fs-wrapper';
-
-import { Schema } from './schema';
-
-
-const YAML_EXT = '.yaml';
-
-
-interface YAML {
-  [prop: string]: YAML
-}
+import { YAML_EXT, YAML } from './base';
+import { default as YAMLWrapper } from './file';
 
 
 interface YAMLDirectoryStoreableContents extends YAML {
@@ -20,41 +9,7 @@ interface YAMLDirectoryStoreableContents extends YAML {
 }
 
 
-export class YAMLWrapper<T extends YAML = YAML> extends AbstractLockingFilesystemWrapper<T> {
-  protected isYAMLFile(objID: string) {
-    return path.extname(objID) === YAML_EXT;
-  }
-
-  public async isValidID(objID: string) {
-    return this.isYAMLFile(objID);
-  }
-
-  public expandPath(objID: string) {
-    // In this case, path to object should include YAML extension.
-    return `${super.expandPath(objID)}${YAML_EXT}`;
-  }
-
-  protected parseData(data: string): any {
-    return yaml.load(data, { schema: Schema });
-  }
-
-  protected dumpData(data: any): string {
-    if (data !== undefined && data !== null) {
-      return yaml.dump(data, {
-        schema: Schema,
-        noRefs: true,
-        noCompatMode: true,
-      });
-
-    } else {
-      throw new Error("Attempt to write invalid data (null or undefined)");
-
-    }
-  }
-}
-
-
-export class YAMLDirectoryWrapper extends YAMLWrapper<YAML> {
+class YAMLDirectoryWrapper extends YAMLWrapper<YAML> {
 
   constructor(baseDir: string) { super(baseDir); }
 
@@ -88,6 +43,7 @@ export class YAMLDirectoryWrapper extends YAMLWrapper<YAML> {
     return metaFileIsFile;
   }
 
+  // TODO: Instead of metaFields argument, specify _meta in object structure.
   public async read(objID: string, metaFields: string[]) {
     const objAbsPath = this.expandDirectoryPath(objID);
 
@@ -162,3 +118,5 @@ export class YAMLDirectoryWrapper extends YAMLWrapper<YAML> {
     }
   }
 }
+
+export default YAMLDirectoryWrapper;

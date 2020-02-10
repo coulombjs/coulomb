@@ -5,7 +5,7 @@ import * as log from 'electron-log';
 import { ipcMain } from 'electron';
 import { listen } from '../ipc/main';
 
-import { YAMLWrapper } from '../db/isogit-yaml/main/yaml/index';
+import { default as YAMLWrapper } from '../db/isogit-yaml/main/yaml/file';
 
 
 export interface Pane {

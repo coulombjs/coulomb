@@ -36,8 +36,8 @@ interface DatabaseConfig {
 
 // Model managers
 
-export interface ManagerClass<M extends Model, DB extends DatabaseBackend> {
-  new (db: DB, managerConfig: ManagerOptions<M>, modelInfo: ModelInfo): ModelManager<M, any>
+export interface ManagerClass<M extends Model, Options extends ManagerOptions<M>, DB extends DatabaseBackend> {
+  new (db: DB, managerConfig: Options, modelInfo: ModelInfo): ModelManager<M, any>
 }
 
 export interface ManagerOptions<M extends Model> {
@@ -45,16 +45,7 @@ export interface ManagerOptions<M extends Model> {
      TODO: Should be moved into isogit-yaml module. */
 
   // Model manager class resolver
-  cls: () => Promise<{ default: ManagerClass<M, any> }>
-
-  // Path to data for this model, relative to DB’s work directory
-  workDir: string
-
-  // List of fields that go into meta.yaml
-  metaFields: (keyof M)[]
-
-  // Name of model field containing unqiue identifier equivalent
-  idField: keyof M
+  cls: () => Promise<{ default: ManagerClass<M, any, any> }>
 }
 
 export interface ManagerConfig<D extends Record<string, DatabaseConfig>> {

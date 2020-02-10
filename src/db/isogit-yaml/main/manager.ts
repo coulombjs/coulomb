@@ -3,24 +3,37 @@ import * as path from 'path';
 import { listen } from '../../../ipc/main';
 
 import { ModelInfo } from '../../../config/app';
-import { ManagerOptions } from '../../../config/main';
+
+import {
+  ManagerClass as BaseManagerClass,
+  ManagerOptions as BaseManagerOptions,
+} from '../../../config/main';
+
 import { Model, AnyIDType } from '../../models';
 import { Index } from '../../query';
-import {
-  VersionedFilesystemBackend,
-  ModelManager,
-  FilesystemManager,
-  CommitError,
-} from '../../main/base';
+import { default as Backend } from './base';
+import { ModelManager, FilesystemManager, CommitError } from '../../main/base';
 
 import { isGitError } from './isogit/base';
+
+
+interface ManagerOptions<M extends Model> extends BaseManagerOptions<M> {
+  // Path to data for this model, relative to DB’s work directory
+  workDir: string
+
+  // List of fields that go into meta.yaml
+  metaFields?: (keyof M)[]
+
+  // Name of model field containing unqiue identifier equivalent
+  idField: keyof M
+}
 
 
 class Manager<M extends Model, IDType extends AnyIDType>
 extends ModelManager<M, IDType> implements FilesystemManager {
 
   constructor(
-      private db: VersionedFilesystemBackend,
+      private db: Backend,
       private managerConfig: ManagerOptions<M>,
       private modelInfo: ModelInfo) {
     super();
@@ -50,7 +63,7 @@ extends ModelManager<M, IDType> implements FilesystemManager {
   public async read(objID: IDType) {
     return await this.db.read(
       this.getDBRef(objID),
-      this.managerConfig.metaFields as string[]) as M;
+      this.managerConfig.metaFields ? (this.managerConfig.metaFields as string[]) : undefined) as M;
   }
 
   public async commit(objIDs: IDType[], message: string) {
@@ -188,5 +201,6 @@ extends ModelManager<M, IDType> implements FilesystemManager {
   }
 }
 
+export const ManagerClass: BaseManagerClass<Model, ManagerOptions<Model>, Backend> = Manager;
 
 export default Manager;
