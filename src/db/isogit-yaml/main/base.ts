@@ -18,40 +18,41 @@ import {
 
 import { BackendDescription, BackendStatus } from '../base';
 
-import { YAMLDirectoryWrapper } from './yaml';
 import { IsoGitWrapper } from './isogit';
 
 
 const DEFAULT_SYNC_INTERVAL = 50000;
 
 
-export interface FixedBackendOptions {
+interface FixedBackendOptions {
   /* Settings supplied by the developer */
 
   workDir: string
   corsProxyURL: string
   upstreamRepoURL: string
+  fsWrapperClass: () => Promise<{ default: new (baseDir: string) => FilesystemWrapper<any> }>
 
   syncInterval?: number
   // How often to try to synchronize Git remote in background, in ms.
   // Synchronization will be skipped if another one is already running.
 }
-export interface ConfigurableBackendOptions {
+interface ConfigurableBackendOptions {
   /* Settings that user can or must specify */
   repoURL: string
   username: string
   authorName: string
   authorEmail: string
 }
-export type BackendOptions = FixedBackendOptions & ConfigurableBackendOptions
-export type InitialBackendOptions = FixedBackendOptions & Partial<ConfigurableBackendOptions>
+type BackendOptions = FixedBackendOptions & ConfigurableBackendOptions & {
+  fsWrapper: FilesystemWrapper<any>
+}
+type InitialBackendOptions = FixedBackendOptions & Partial<ConfigurableBackendOptions>
 
 
-export type BackendStatusReporter = BaseBackendStatusReporter<BackendStatus>
+type BackendStatusReporter = BaseBackendStatusReporter<BackendStatus>
 
 
-export const Backend: BackendClass<InitialBackendOptions, BackendOptions, BackendStatus> = class Backend
-extends VersionedFilesystemBackend {
+class Backend extends VersionedFilesystemBackend {
   /* Combines a filesystem storage with Git. */
 
   private git: IsoGitWrapper;
@@ -66,8 +67,7 @@ extends VersionedFilesystemBackend {
 
     super();
 
-    this.fs = new YAMLDirectoryWrapper(this.opts.workDir);
-    // TODO: Supply specific FS wrapper implementation via options
+    this.fs = opts.fsWrapper;
 
     this.git = new IsoGitWrapper(
       fs,
@@ -154,10 +154,14 @@ extends VersionedFilesystemBackend {
       return await settings.getValue(`${settingIDPrefix}${settingID}`) as T;
     }
 
+    const fsWrapperClass = (await availableOptions.fsWrapperClass()).default;
+
     return {
       workDir: availableOptions.workDir,
       corsProxyURL: availableOptions.corsProxyURL,
       upstreamRepoURL: availableOptions.upstreamRepoURL,
+      fsWrapperClass: availableOptions.fsWrapperClass,
+      fsWrapper: new fsWrapperClass(availableOptions.workDir),
 
       repoURL: (
         (await getSetting<string>('gitRepoUrl'))
