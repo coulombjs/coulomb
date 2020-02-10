@@ -111,7 +111,7 @@ export class IsoGitWrapper {
   private async forceInitialize() {
     /* Initializes from scratch: wipes work directory, clones repository, adds remotes. */
 
-    log.warn("C/db/isogit: Initialize");
+    log.warn("C/db/isogit: Initializing");
 
     log.silly("C/db/isogit: Initialize: Ensuring data directory exists");
     await this.fs.ensureDir(this.workDir);
