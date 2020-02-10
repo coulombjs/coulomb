@@ -9,7 +9,8 @@ import { AppConfig, Window } from '../config/app';
 
 import { MainConfig } from '../config/main';
 import { SettingManager } from '../settings/main';
-import { notifyAllWindows } from '../main/window';
+import { notifyAllWindows, WindowOpenerParams } from '../main/window';
+import { listen } from '../ipc/main';
 import {
   Backend,
   ModelManager,
@@ -228,6 +229,21 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     }
   )))
   .reduce((val, acc) => ({ ...acc, ...val }), {} as Partial<Managers>) as Managers;
+
+
+  listen<{ id: keyof typeof config.app.windows, params?: Omit<WindowOpenerParams, 'component'> }, {}>
+  ('open-predefined-window', async ({ id, params }) => {
+    const paramsWithDefaults = { ...config.app.windows[id].openerParams, ...params || {}};
+    openWindow(paramsWithDefaults);
+    return {};
+  });
+
+
+  listen<WindowOpenerParams, {}>
+  ('open-arbitrary-window', async (params) => {
+    openWindow(params);
+    return {};
+  });
 
 
   // Initialize window-opening endpoints
