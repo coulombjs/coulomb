@@ -2,18 +2,36 @@
   border-radius: 0 !important;
   box-shadow: none !important;
 
-  // Center, really needed if BP3 Icon (not Button)
   display: flex !important;
   flex-flow: column nowrap;
   align-items: center;
   justify-content: center;
 }
 
+@mixin button {
+  max-width: 100%;
+  white-space: nowrap;
+
+  :global .bp3-button-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 :local .backendStatus {
-  display: flex;
-  flex-flow: row nowrap;
+  @include button;
 }
 
 :local .passwordPrompt {
   padding: 1rem 1rem .01rem 1rem;
+}
+
+:local .sourceInfo {
+  @include button;
+}
+
+:local .base {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: flex-start;
 }
