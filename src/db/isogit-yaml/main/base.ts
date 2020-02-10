@@ -10,7 +10,7 @@ import { UniqueConstraintError } from '../../errors';
 import { FilesystemWrapper } from '../../main/fs-wrapper';
 
 import {
-  BackendClass,
+  BackendClass as BaseBackendClass,
   BackendStatusReporter as BaseBackendStatusReporter,
   VersionedFilesystemBackend,
   FilesystemManager,
@@ -370,5 +370,7 @@ class Backend extends VersionedFilesystemBackend {
     });
   }
 }
+
+export const BackendClass: BaseBackendClass<InitialBackendOptions, BackendOptions, BackendStatus> = Backend
 
 export default Backend;
