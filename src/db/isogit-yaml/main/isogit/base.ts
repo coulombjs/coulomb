@@ -137,8 +137,10 @@ export class IsoGitWrapper {
       });
 
     } catch (e) {
+      log.error("C/db/isogit: Error during initialization")
       await this.fs.remove(this.workDir);
       await this._handleGitError(e);
+      throw e;
     }
   }
 
