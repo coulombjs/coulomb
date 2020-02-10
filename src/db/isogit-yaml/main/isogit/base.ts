@@ -457,14 +457,18 @@ async function checkOnlineStatus(timeout = 2500): Promise<boolean> {
 
     req.end();
 
+    const checkTimeout = setTimeout(reportOffline, timeout);
+
     function reportOffline() {
       log.warn("C/db/isogit: Connection test: Report offline");
-      req.abort();
+      try { req.abort(); } catch (e) {}
+      clearTimeout(checkTimeout);
       resolve(false);
     }
     function reportOnline() {
       log.info("C/db/isogit: Connection test: Report online");
-      req.abort();
+      try { req.abort(); } catch (e) {}
+      clearTimeout(checkTimeout);
       resolve(true);
     }
   });
