@@ -184,9 +184,6 @@ extends VersionedFilesystemBackend {
     if (forceReset === true) {
       log.warn("C/db/isogit-yaml: Git is being force reinitialized");
       doInitialize = true;
-    } else if (!(await this.git.isInitialized())) {
-      log.warn("C/db/isogit-yaml: Git is not initialized yet");
-      doInitialize = true;
     } else if (!(await this.git.isUsingRemoteURLs({
         origin: this.opts.repoURL,
         upstream: this.opts.upstreamRepoURL}))) {
