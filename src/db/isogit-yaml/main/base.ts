@@ -211,11 +211,11 @@ class Backend extends VersionedFilesystemBackend {
     this.gitSyncInterval = setInterval(this.synchronize, this.gitSyncIntervalDelay);
   }
 
-  public async read(objID: string, metaFields: string[]) {
+  public async read(objID: string, metaFields?: string[]) {
     return await this.fs.read(this.getRef(objID), metaFields) as object;
   }
 
-  public async create<O extends Record<string, any>>(obj: O, objPath: string, metaFields: (keyof O)[]) {
+  public async create<O extends Record<string, any>>(obj: O, objPath: string, metaFields?: (keyof O)[]) {
     if (await this.fs.exists(objPath)) {
       throw new UniqueConstraintError("filesystem path", objPath);
     }
