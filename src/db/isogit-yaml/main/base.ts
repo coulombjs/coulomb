@@ -235,6 +235,8 @@ class Backend extends VersionedFilesystemBackend {
       map(fileinfo => fileinfo.path);
 
     if (paths.length > 0) {
+      // TODO: Make Git track which files got committed (had changes),
+      // and return paths
       await this.git.stageAndCommit(paths, message);
     }
   }
