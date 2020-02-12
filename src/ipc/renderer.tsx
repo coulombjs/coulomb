@@ -21,8 +21,27 @@ class IPCFailure extends Error {
 }
 
 
+export function useIPCEvent<P extends object>
+(endpointName: string, handler: (payload: P) => void) {
+  /* Sets up main -> renderer event listener & cleanup on component destruction. */
+
+  useEffect(() => {
+    function handleEvent(evt: Electron.Event, payload: P) {
+      handler(payload);
+    }
+    ipcRenderer.on(endpointName, handleEvent);
+    return function cleanup() {
+      ipcRenderer.removeListener(endpointName, handleEvent);
+    }
+  }, []);
+}
+
+
 export function useIPCValue<I extends object, O>
 (endpointName: string, initialValue: O, payload?: I): IPCHook<O> {
+  /* Invokes an endpoint and provides result state in the form of a hook.
+     State can be updated by calling `refresh()`. */
+
   const [value, updateValue] = useState(initialValue);
   const [errors, updateErrors] = useState([] as string[]);
   const [reqCounter, updateReqCounter] = useState(0);
