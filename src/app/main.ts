@@ -282,7 +282,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     managers,
     databases,
     openWindow: _openWindow,
-  };
+  } as MainApp<any, any>;
 
   return main as MainApp<typeof config.app, typeof config>;
 };
