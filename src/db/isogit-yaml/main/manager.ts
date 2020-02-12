@@ -12,12 +12,12 @@ import {
 import { Model, AnyIDType } from '../../models';
 import { Index } from '../../query';
 import { default as Backend } from './base';
-import { ModelManager, FilesystemManager, CommitError } from '../../main/base';
+import { ModelManager, FilesystemManager, CommitError, ManagedDataChangeReporter } from '../../main/base';
 
 import { isGitError } from './isogit/base';
 
 
-interface ManagerOptions<M extends Model> extends BaseManagerOptions<M> {
+export interface ManagerOptions<M extends Model> extends BaseManagerOptions<M> {
   // Path to data for this model, relative to DB’s work directory
   workDir: string
 
@@ -35,7 +35,8 @@ extends ModelManager<M, IDType> implements FilesystemManager {
   constructor(
       private db: Backend,
       private managerConfig: ManagerOptions<M>,
-      private modelInfo: ModelInfo) {
+      private modelInfo: ModelInfo,
+      private reportUpdatedData: ManagedDataChangeReporter<IDType>) {
     super();
 
     db.registerManager(this as FilesystemManager);
@@ -57,6 +58,7 @@ extends ModelManager<M, IDType> implements FilesystemManager {
         objID,
         commit !== true ? commit : null,
         'create');
+      await this.reportUpdatedData([objID]);
     }
   }
 
@@ -69,12 +71,14 @@ extends ModelManager<M, IDType> implements FilesystemManager {
   public async commit(objIDs: IDType[], message: string) {
     if (objIDs.length > 0) {
       await this.db.commit(objIDs.map(objID => this.getDBRef(objID)), message);
+      await this.reportUpdatedData(objIDs);
     }
   }
 
   public async discard(objIDs: IDType[]) {
     if (objIDs.length > 0) {
       await this.db.discard(objIDs.map(objID => this.getDBRef(objID)));
+      await this.reportUpdatedData(objIDs);
     }
   }
 
@@ -115,6 +119,7 @@ extends ModelManager<M, IDType> implements FilesystemManager {
         commit !== true ? commit : null,
         'update',
         newData);
+      await this.reportUpdatedData([objID]);
     }
   }
 
@@ -126,6 +131,7 @@ extends ModelManager<M, IDType> implements FilesystemManager {
         objID,
         commit !== true ? commit : null,
         'delete');
+      await this.reportUpdatedData([objID]);
     }
   }
 
@@ -201,6 +207,6 @@ extends ModelManager<M, IDType> implements FilesystemManager {
   }
 }
 
-export const ManagerClass: BaseManagerClass<Model, ManagerOptions<Model>, Backend> = Manager;
+export const ManagerClass: BaseManagerClass<any, any, ManagerOptions<any>, Backend> = Manager;
 
 export default Manager;

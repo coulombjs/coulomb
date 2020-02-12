@@ -213,13 +213,15 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 
   managers = (await Promise.all(Object.entries(config.managers).map(
     async ([modelName, managerConf]) => {
-      const modelConf = config.app.data[modelName];
+      const modelInfo = config.app.data[modelName];
 
       log.verbose("C/initMain: Initializing model manager for DB", managerConf.dbName, databases);
 
       const db = databases[managerConf.dbName];
       const ManagerClass = (await managerConf.options.cls()).default;
-      const manager = new ManagerClass(db, managerConf.options, modelConf);
+      const manager = new ManagerClass(
+        db, managerConf.options, modelInfo,
+        async (changedIDs?: any[]) => await reportModifiedDataToAllWindows(modelName, changedIDs?.map(id => `${id}`)));
 
       if (manager.setUpIPC) {
         manager.setUpIPC(modelName);
@@ -288,6 +290,13 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 
 async function reportBackendStatusToAllWindows(dbName: string, payload: object) {
   return await notifyAllWindows(`db-${dbName}-status`, payload);
+}
+
+
+async function reportModifiedDataToAllWindows(modelName: string, changedIDs?: string[]) {
+  // TODO: If too many update calls with one ID affect performance,
+  // debounce this function, combining shorter ID lists and reporting more of them at once
+  return await notifyAllWindows(`model-${modelName}-objects-changed`, { ids: changedIDs });
 }
 
 

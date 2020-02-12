@@ -45,6 +45,20 @@ export abstract class Backend<IDType = AnyIDType> {
 }
 
 
+export type ManagedDataChangeReporter<IDType> =
+(changedIDs?: IDType[]) => Promise<void>;
+/* Function of this signature will be passed to manager constructor,
+   to be called when manager reports data updates to app windows,
+   letting any object lists re-query the data.
+
+   `changedIDs` is intended to avoid unnecessary re-querying.
+   An object referenced in it may have been created,
+   modified or deleted.
+   
+   Manager must omit `changedIDs` if it is not sure
+   which exactly objects did change. */
+
+
 export type BackendStatusReporter<Status> =
 (payload: Partial<Status>) => Promise<void>;
 /* Function of this signature will be passed to backend constructor,

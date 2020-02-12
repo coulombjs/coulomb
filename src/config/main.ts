@@ -1,8 +1,9 @@
 import { AppConfig, ModelInfo } from './app';
-import { Model } from '../db/models';
+import { Model, AnyIDType } from '../db/models';
 import {
   BackendClass as DatabaseBackendClass,
   Backend as DatabaseBackend,
+  ManagedDataChangeReporter,
   ModelManager,
 } from '../db/main/base';
 
@@ -36,8 +37,17 @@ interface DatabaseConfig {
 
 // Model managers
 
-export interface ManagerClass<M extends Model, Options extends ManagerOptions<M>, DB extends DatabaseBackend> {
-  new (db: DB, managerConfig: Options, modelInfo: ModelInfo): ModelManager<M, any>
+export interface ManagerClass<
+  M extends Model,
+  IDType extends AnyIDType,
+  Options extends ManagerOptions<M>,
+  DB extends DatabaseBackend> {
+
+  new (
+    db: DB,
+    managerConfig: Options,
+    modelInfo: ModelInfo,
+    reportChangedData: ManagedDataChangeReporter<IDType>): ModelManager<M, IDType>
 }
 
 export interface ManagerOptions<M extends Model> {
@@ -45,7 +55,7 @@ export interface ManagerOptions<M extends Model> {
      TODO: Should be moved into isogit-yaml module. */
 
   // Model manager class resolver
-  cls: () => Promise<{ default: ManagerClass<M, any, any> }>
+  cls: () => Promise<{ default: ManagerClass<M, any, any, any> }>
 }
 
 export interface ManagerConfig<D extends Record<string, DatabaseConfig>> {
