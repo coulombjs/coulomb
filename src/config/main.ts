@@ -19,7 +19,7 @@ export interface MainConfig<App extends AppConfig> {
     [dbName: string]: DatabaseConfig
   }
   managers: {
-    [DT in keyof App["data"]]: ManagerConfig<this["databases"]>
+    [DT in keyof App["data"]]: ManagerConfig<any>
   }
 }
 
@@ -58,11 +58,11 @@ export interface ManagerOptions<M extends Model> {
   cls: () => Promise<{ default: ManagerClass<M, any, any, any> }>
 }
 
-export interface ManagerConfig<D extends Record<string, DatabaseConfig>> {
+export interface ManagerConfig<M> {
   // The corresponding key in MainConfig["databases"]
   dbName: string
 
   // Any options to be passed to manager constructor,
   // must conform to class in corresponding ManagerOptions
-  options: ManagerOptions<any>
+  options: ManagerOptions<M>
 }
