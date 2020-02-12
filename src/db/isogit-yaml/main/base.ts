@@ -77,6 +77,10 @@ class Backend extends VersionedFilesystemBackend {
       { name: this.opts.authorName, email: this.opts.authorEmail },
       this.opts.workDir,
       this.opts.corsProxyURL,
+
+      // The status of this backend is reduced to Git repo status now.
+      // Potentially it should include filesystem-related status as well,
+      // reporting issues with e.g. insufficient disk space.
       this.reportBackendStatus,
     );
 
