@@ -21,7 +21,7 @@ class YAMLWrapper<T extends YAML = YAML> extends AbstractLockingFilesystemWrappe
     return `${super.expandPath(objID)}${YAML_EXT}`;
   }
 
-  protected parseData(data: string): any {
+  public parseData(data: string): any {
     return yaml.load(data, { schema: Schema });
   }
 

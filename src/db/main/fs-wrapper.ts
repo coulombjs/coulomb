@@ -55,6 +55,9 @@ export interface FilesystemWrapper<T> {
      This can be as simple as comparing the extension
      but if necessary can do further checks on file/directory contents. */
 
+  parseData(contents: string): T;
+  /* Given string contents, returns the object of expeected type
+     (e.g., decoding serialized format). */
 }
 
 
@@ -123,7 +126,7 @@ export abstract class AbstractLockingFilesystemWrapper<T> implements FilesystemW
     });
   }
 
-  protected abstract parseData(contents: string): T
+  public abstract parseData(contents: string): T
 
   protected abstract dumpData(data: T): string
 
