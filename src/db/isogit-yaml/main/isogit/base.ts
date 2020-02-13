@@ -336,31 +336,6 @@ export class IsoGitWrapper {
     });
   }
 
-  private async unstageAll() {
-    log.verbose("C/db/isogit: Unstaging all changes");
-    await git.remove({ dir: this.workDir, filepath: '.' });
-  }
-
-  private async _handleGitError(e: Error & { code: string }): Promise<void> {
-    log.debug("Handling Git error", e);
-
-    if (e.code === 'FastForwardFail' || e.code === 'MergeNotSupportedFail') {
-      // NOTE: There’s also PushRejectedNonFastForward, but it seems to be thrown
-      // for unrelated cases during push (false positive).
-      // Because of that false positive, we ignore that error and instead do pull first,
-      // catching actual fast-forward fails on that step before push.
-      await this.setStatus({ statusRelativeToLocal: 'diverged' });
-    } else if (['MissingUsernameError', 'MissingAuthorError', 'MissingCommitterError'].indexOf(e.code) >= 0) {
-      await this.setStatus({ isMisconfigured: true });
-    } else if (
-        e.code === 'MissingPasswordTokenError'
-        || (e.code === 'HTTPError' && e.message.indexOf('Unauthorized') >= 0)) {
-      log.warn("Password input required");
-      this.setPassword(undefined);
-      await this.setStatus({ needsPassword: true });
-    }
-  }
-
   public async checkUncommitted(): Promise<boolean> {
     /* Checks for any uncommitted changes locally present.
        Notifies all windows about the status. */
@@ -437,6 +412,31 @@ export class IsoGitWrapper {
         }
       }
     });
+  }
+
+  private async unstageAll() {
+    log.verbose("C/db/isogit: Unstaging all changes");
+    await git.remove({ dir: this.workDir, filepath: '.' });
+  }
+
+  private async _handleGitError(e: Error & { code: string }): Promise<void> {
+    log.debug("Handling Git error", e);
+
+    if (e.code === 'FastForwardFail' || e.code === 'MergeNotSupportedFail') {
+      // NOTE: There’s also PushRejectedNonFastForward, but it seems to be thrown
+      // for unrelated cases during push (false positive).
+      // Because of that false positive, we ignore that error and instead do pull first,
+      // catching actual fast-forward fails on that step before push.
+      await this.setStatus({ statusRelativeToLocal: 'diverged' });
+    } else if (['MissingUsernameError', 'MissingAuthorError', 'MissingCommitterError'].indexOf(e.code) >= 0) {
+      await this.setStatus({ isMisconfigured: true });
+    } else if (
+        e.code === 'MissingPasswordTokenError'
+        || (e.code === 'HTTPError' && e.message.indexOf('Unauthorized') >= 0)) {
+      log.warn("Password input required");
+      this.setPassword(undefined);
+      await this.setStatus({ needsPassword: true });
+    }
   }
 }
 
