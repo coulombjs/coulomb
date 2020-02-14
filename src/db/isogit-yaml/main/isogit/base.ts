@@ -164,6 +164,16 @@ export class IsoGitWrapper {
     return await git.config({ dir: this.workDir, path: prop });
   }
 
+  async readFileBlobAtCommit(relativeFilePath: string, commitHash: string): Promise<string> {
+    /* Reads file contents at given path as of given commit. File contents must use UTF-8 encoding. */
+
+    return (await git.readBlob({
+      dir: this.workDir,
+      oid: commitHash,
+      filepath: relativeFilePath,
+    })).blob.toString();
+  }
+
   async pull() {
     log.verbose("C/db/isogit: Pulling master with fast-forward merge");
 
