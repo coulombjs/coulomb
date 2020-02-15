@@ -1,10 +1,14 @@
 /* Wraps IPC communication in React hooks & locking queue. */
 
 import AsyncLock from 'async-lock';
+import * as log from 'electron-log';
 import { ipcRenderer } from 'electron';
 import { useEffect, useState } from 'react';
 
 import { reviveJsonValue } from './utils';
+
+
+var cache: { [id: string]: any } = {};
 
 
 type IPCResponse<O> = {
@@ -45,10 +49,30 @@ export function useIPCValue<I extends object, O>
   const [value, updateValue] = useState(initialValue);
   const [errors, updateErrors] = useState([] as string[]);
   const [reqCounter, updateReqCounter] = useState(0);
+  const payloadSnapshot = JSON.stringify(payload || {});
 
   useEffect(() => {
-    ipcEndpointRequestLock.acquire(endpointName, async function () {
-      const resp = await ipcRenderer.invoke(endpointName, JSON.stringify(payload || {}));
+    (async () => {
+      const cacheKey = `${endpointName}${reqCounter}${payloadSnapshot}`;
+
+      let resp: string;
+      const cachedResp = cache[cacheKey];
+
+      if (cachedResp !== undefined) {
+        resp = cachedResp;
+      } else {
+        //(async () => {
+        updateValue(initialValue);
+
+        resp = await ipcEndpointRequestLock.acquire(endpointName, async function () {
+          const payloadToSend = JSON.stringify(payload || {});
+          return await ipcRenderer.invoke(endpointName, payloadToSend);
+        });
+
+        cache[cacheKey] = resp;
+        //})();
+      }
+
       const data = JSON.parse(resp, reviveJsonValue);
 
       if (data.errors !== undefined) {
@@ -65,8 +89,8 @@ export function useIPCValue<I extends object, O>
       } else {
         updateValue(data as O);
       }
-    });
-  }, []);
+    })();
+  }, [reqCounter, payloadSnapshot]);
 
   return {
     value: value,
