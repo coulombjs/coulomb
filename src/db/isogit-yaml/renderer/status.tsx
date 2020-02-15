@@ -41,7 +41,7 @@ function ({ dbIPCPrefix, status, description }) {
       <Popover minimal={true} content={
           <PasswordPrompt
             onConfirm={async (password) => { await setPassword(password); openPasswordPrompt(false); }} />}
-            position={Position.BOTTOM_LEFT}
+            position={Position.TOP_RIGHT}
             isOpen={passwordPromptIsOpen}>
         <ActionableStatus
           status={status}
