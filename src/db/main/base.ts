@@ -25,7 +25,11 @@ export abstract class Backend<IDType = AnyIDType> {
   // the app would query data objects via corresponding manager,
   // which in turn would call these methods
   // filling in appropriate arguments.
+
   abstract getIndex(idField: string, ...args: any[]): Promise<Index<any>>
+  // DEPRECATED: Reading all DB objects without any filtering query will be too slow.
+
+  abstract listIDs(query: object): Promise<IDType[]>
   abstract read(objID: IDType, ...args: any[]): Promise<object>
   abstract create(obj: object, ...args: any[]): Promise<void>
   abstract update(objID: IDType, obj: object, ...args: any[]): Promise<void>
@@ -117,29 +121,46 @@ export abstract class VersionedBackend<IDType = AnyIDType> extends Backend<IDTyp
 }
 
 
-export abstract class ModelManager<M extends Model, IDType extends AnyIDType> {
+export abstract class ModelManager<M extends Model, IDType extends AnyIDType, Q extends object = object> {
   /* Passes calls on to corresponding Backend (or subclass) methods,
      but limits their scope only to objects manipulated by this manager. */
 
-  abstract readAll(query: object): Promise<Index<M>>
+  abstract count(query?: Q): Promise<number>
+
+  abstract listIDs(query?: Q): Promise<IDType[]>
+  // TODO: Returned IDs cannot automatically be cast to IDType;
+  // get rid of IDType generic and manage types in subclasses?
+
+  abstract readAll(query: Q): Promise<Index<M>>
   abstract read(id: IDType): Promise<M>
   abstract create(obj: M, ...args: any[]): Promise<void>
   abstract update(objID: IDType, obj: M, ...args: any[]): Promise<void>
   abstract delete(objID: IDType, ...args: unknown[]): Promise<void>
+
+  protected abstract getDBRef(objID: IDType | string): string
+  protected abstract getObjID(dbRef: string): IDType
 
   setUpIPC(modelName: string) {
     /* Initializes IPC endpoints to query or update data objects. */
 
     const prefix = `model-${modelName}`;
 
-    listen<{}, Index<M>>
-    (`${prefix}-read-all`, async () => {
-      return await this.readAll({});
-    });
+    listen<{ query?: Q }, { ids: IDType[] }>
+    (`${prefix}-list-ids`, async ({ query }) => ({ ids: (await this.listIDs(query)) }));
 
-    listen<{ objectID: IDType }, M>
+    listen<{ query?: Q }, { count: number }>
+    (`${prefix}-count`, async ({ query }) => ({ count: await this.count(query) }));
+
+    listen<{ query: Q }, Index<M>>
+    (`${prefix}-read-all`, async ({ query }) => this.readAll(query));
+
+    listen<{ objectID: IDType | null }, { object: M | null }>
     (`${prefix}-read-one`, async ({ objectID }) => {
-      return await this.read(objectID);
+      if (objectID === null) {
+        return { object: null };
+      } else {
+        return { object: await this.read(objectID) };
+      }
     });
   }
 }

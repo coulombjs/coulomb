@@ -1,3 +1,4 @@
+//import * as log from 'electron-log';
 import * as path from 'path';
 
 import { listen } from '../../../ipc/main';
@@ -29,8 +30,8 @@ export interface ManagerOptions<M extends Model> extends BaseManagerOptions<M> {
 }
 
 
-class Manager<M extends Model, IDType extends AnyIDType>
-extends ModelManager<M, IDType> implements FilesystemManager {
+class Manager<M extends Model, IDType extends AnyIDType, Q extends object = object>
+extends ModelManager<M, IDType, Q> implements FilesystemManager {
 
   constructor(
       private db: Backend,
@@ -44,6 +45,15 @@ extends ModelManager<M, IDType> implements FilesystemManager {
 
   public managesFileAtPath(filePath: string) {
     return true;
+  }
+
+  public async listIDs(query?: Q) {
+    return (await this.db.listIDs({ subdir: this.managerConfig.workDir })).
+    map(ref => this.getObjID(ref));
+  }
+
+  public async count(query?: Q) {
+    return (await this.db.listIDs({ subdir: this.managerConfig.workDir })).length;
   }
 
 
@@ -66,6 +76,10 @@ extends ModelManager<M, IDType> implements FilesystemManager {
     return await this.db.read(
       this.getDBRef(objID),
       this.managerConfig.metaFields ? (this.managerConfig.metaFields as string[]) : undefined) as M;
+  }
+
+  public async readVersion(objID: IDType, version: string) {
+    return await this.db.readVersion(this.getDBRef(objID), version);
   }
 
   public async commit(objIDs: IDType[], message: string) {
@@ -101,8 +115,8 @@ extends ModelManager<M, IDType> implements FilesystemManager {
 
   public async readAll() {
     var idx: Index<M> = await this.db.getIndex(
-      this.managerConfig.idField as string,
-      this.managerConfig.workDir);
+      this.managerConfig.workDir,
+      this.managerConfig.idField as string);
     return idx;
   }
 
@@ -162,16 +176,23 @@ extends ModelManager<M, IDType> implements FilesystemManager {
     return `${verb} ${this.modelInfo.shortName} ${this.formatObjectName(objID, obj)}`;
   }
 
-  private getDBRef(objID: IDType): string {
+  protected getDBRef(objID: IDType | string) {
     /* Returns DB backend’s full ID given object ID. */
     return path.join(this.managerConfig.workDir, `${objID}`);
   }
 
-  public getObjID(dbRef: string) {
+  protected getObjID(dbRef: string) {
     if (path.isAbsolute(dbRef)) {
       throw new Error("getObjID() received dbRef which is an absolute filesystem path");
     }
-    const relativeRef = path.relative(this.managerConfig.workDir, dbRef);
+
+    var relativeRef = path.relative(this.managerConfig.workDir, dbRef);
+    // `path.relative()` prepends unnecessary "../" when DB ref is plain filename.
+    // This condition is necessary when DB ref is received from `db.listIDs()`,
+    // and not necessary when DB ref is received from `db.listUncommitted()`.
+    // TODO: See how `listUncommitted()` results are and make `listIDs()` consistent.
+    if (relativeRef.startsWith('../')) { relativeRef = relativeRef.replace('../', ''); }
+
     const baseComponent = relativeRef.split(path.sep)[0];
 
     // if (!objId || !(await this.isValidId(objId))) {
@@ -179,6 +200,8 @@ extends ModelManager<M, IDType> implements FilesystemManager {
     // }
 
     return baseComponent as IDType;
+    // NOTE: Will cause errors if IDType is not a string.
+    // If IDType is not a string, subclass must cast properly.
   }
 
   public setUpIPC(modelName: string) {

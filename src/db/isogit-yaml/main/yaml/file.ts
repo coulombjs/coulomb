@@ -21,6 +21,13 @@ class YAMLWrapper<T extends YAML = YAML> extends AbstractLockingFilesystemWrappe
     return `${super.expandPath(objID)}${YAML_EXT}`;
   }
 
+  public async listIDs(query: { subdir?: string }, ...listArg: any[]) {
+    const ids = await super.listIDs(query);
+    return ids.
+    map(id => path.basename(id, YAML_EXT)).
+    map(id => query.subdir ? path.join(query.subdir, id) : id);
+  }
+
   public parseData(data: string): any {
     return yaml.load(data, { schema: Schema });
   }

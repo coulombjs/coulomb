@@ -90,6 +90,10 @@ class Backend extends VersionedFilesystemBackend {
     this.synchronize = this.synchronize.bind(this);
   }
 
+  public async listIDs(query: { subdir: string }) {
+    return await this.fs.listIDs({ subdir: query.subdir });
+  }
+
   public async describe(): Promise<BackendDescription> {
     return {
       verboseName: "Git-versioned YAML file tree",

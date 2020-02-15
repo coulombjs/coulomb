@@ -1,3 +1,4 @@
+import * as log from 'electron-log';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import AsyncLock from 'async-lock';
@@ -25,6 +26,8 @@ export interface FilesystemWrapper<T> {
      TODO: Could better be made read-only, behind accessor method. */
 
   read(objID: string, ...args: any[]): Promise<T>;
+
+  listIDs(query: { subdir?: string }, ...listArgs: any[]): Promise<string[]>;
 
   readAll(query: { subdir?: string }, ...readArgs: any[]): Promise<T[]>;
   /* Scan filesystem and returns all the objects found. */
@@ -90,15 +93,24 @@ export abstract class AbstractLockingFilesystemWrapper<T> implements FilesystemW
     return true;
   }
 
-  public async readAll(query: { subdir?: string }, ...readArgs: any[]) {
+  public async listIDs(query: { subdir?: string }, ...listArg: any[]) {
     const dir = query.subdir ? path.join(this.baseDir, query.subdir) : this.baseDir;
 
-    const objIDs = await fs.readdir(dir);
+    const potentialIDs = (await fs.readdir(dir));
+    var ids: string[] = [];
+    for (const maybeID of potentialIDs) {
+      if (await this.isValidID(maybeID)) {
+        ids.push(maybeID);
+      }
+    }
+    return ids;
+  }
+
+  public async readAll(query: { subdir?: string }, ...readArgs: any[]) {
+    const objIDs = await this.listIDs(query);
     var objs = [];
     for (const objID of objIDs) {
-      if (await this.isValidID(objID)) {
-        objs.push(await this.read(objID, ...readArgs));
-      }
+      objs.push(await this.read(objID, ...readArgs));
     }
     return objs;
   }
