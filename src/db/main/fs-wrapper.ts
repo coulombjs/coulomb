@@ -1,4 +1,3 @@
-import * as log from 'electron-log';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import AsyncLock from 'async-lock';
