@@ -129,6 +129,7 @@ export abstract class AbstractLockingFilesystemWrapper<T> implements FilesystemW
   public async write(objID: string, newContents: T | undefined, ...args: any[]) {
     const filePath = this.expandPath(objID);
     return await this.fileAccessLock.acquire(filePath, async () => {
+      await fs.ensureDir(path.dirname(filePath));
       if (newContents !== undefined) {
         await fs.writeFile(filePath, this.dumpData(newContents), { encoding: 'utf8' });
       } else {
