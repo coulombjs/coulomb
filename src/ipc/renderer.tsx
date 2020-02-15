@@ -77,7 +77,6 @@ export function useIPCValue<I extends object, O>
 
       if (data.errors !== undefined) {
         const resp = data as IPCResponse<O>;
-        updateValue(data.result);
 
         if (resp.result === undefined) {
           if (resp.errors.length > 0) {
@@ -85,6 +84,8 @@ export function useIPCValue<I extends object, O>
           } else {
             updateErrors(["Unknown error"]);
           }
+        } else {
+          updateValue(data.result);
         }
       } else {
         updateValue(data as O);
