@@ -5,7 +5,7 @@ import * as ReactDOM from 'react-dom';
 import { AppConfig } from '../config/app';
 import { RendererConfig } from '../config/renderer';
 
-import { Model } from '../db/models';
+import { Model, AnyIDType } from '../db/models';
 import { Index } from '../db/query';
 
 import { NonIdealState, Spinner } from '@blueprintjs/core';
@@ -17,17 +17,44 @@ import '!style-loader!css-loader!./renderer.css';
 import { useIPCEvent, useIPCValue } from '../ipc/renderer';
 
 
-interface UseDataHookResult<M extends Model> {
-  objects: Index<M>
-}
-
-type UseDataHook<C extends RendererConfig<any>> =
-<M extends Model, Q extends object>(modelName: keyof C["app"]["data"], query: Q) => UseDataHookResult<M>
-
 interface AppRenderer<C extends RendererConfig<any>> {
   root: HTMLElement
-  useData: UseDataHook<C>
+  useCount: UseCountHook<C>
+  useIDs: UseIDsHook<C>
+  useMany: UseManyHook<C>
+  useOne: UseOneHook<C>
 }
+
+
+// Data operation hook interfaces
+
+interface UseManyHookResult<M extends Model> {
+  objects: Index<M>
+}
+type UseManyHook<C extends RendererConfig<any>> =
+<M extends Model, Q extends object>
+(modelName: keyof C["app"]["data"], query: Q) => UseManyHookResult<M>
+
+interface UseIDsHookResult<IDType extends AnyIDType> {
+  ids: IDType[]
+}
+type UseIDsHook<C extends RendererConfig<any>> =
+<IDType extends AnyIDType, Q extends object>
+(modelName: keyof C["app"]["data"], query: Q) => UseIDsHookResult<IDType>
+
+interface UseCountHookResult {
+  count: number
+}
+type UseCountHook<C extends RendererConfig<any>> =
+<Q extends object>
+(modelName: keyof C["app"]["data"], query: Q) => UseCountHookResult
+
+interface UseOneHookResult<M extends Model> {
+  object: M | null
+}
+type UseOneHook<C extends RendererConfig<any>> =
+<M extends Model, IDType extends AnyIDType>
+(modelName: keyof C["app"]["data"], objectID: IDType | null) => UseOneHookResult<M>
 
 
 // Render application screen in a new window
@@ -50,24 +77,84 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
 
   log.debug(`Requested window component ${componentId}`);
 
-  const useData: UseDataHook<C> =
+
+  // TODO: Refactor out hook initialization
+
+  const useIDs: UseIDsHook<C> =
+  <IDType extends AnyIDType, Q extends object = any>
+  (modelName: keyof A["data"], query?: Q) => {
+    /* Queries data for specified model, listens for update events and updates the dataset. */
+
+    const trackedIDs = useIPCValue<Q, { ids: IDType[] }>
+    (`model-${modelName}-list-ids`, { ids: [] }, query);
+
+    useIPCEvent<{ ids?: string[] }>(`model-${modelName}-objects-changed`, function ({ ids }) {
+      const stringIDs = trackedIDs.value.ids.map(id => `${id}`);
+      const shouldRefresh = ids !== undefined
+        ? ids.filter(id => stringIDs.includes(id)).length > 0
+        : true;
+      if (shouldRefresh) {
+        trackedIDs.refresh();
+      }
+    });
+
+    return { ids: trackedIDs.value.ids };
+  }
+
+  const useCount: UseCountHook<C> =
+  <Q extends object = any>
+  (modelName: keyof A["data"], query?: Q) => {
+    /* Queries data for specified model, listens for update events and updates the dataset. */
+
+    const count = useIPCValue<Q, { count: number }>
+    (`model-${modelName}-count`, { count: 0 }, query);
+
+    useIPCEvent<{ ids?: string[] }>(`model-${modelName}-objects-changed`, function () {
+      count.refresh();
+    });
+
+    return { count: count.value.count };
+  }
+
+  const useMany: UseManyHook<C> =
   <M extends Model, Q extends object = any>
   (modelName: keyof A["data"], query?: Q) => {
     /* Queries data for specified model, listens for update events and updates the dataset. */
 
-    const objects = useIPCValue<Q, Index<M>>(`model-${modelName}-read-all`, {}, query);
+    const objects = useIPCValue<Q, Index<M>>
+    (`model-${modelName}-read-all`, {}, query);
 
     useIPCEvent<{ ids?: string[] }>(`model-${modelName}-objects-changed`, function ({ ids }) {
-      const trackedObjectIDs = Object.keys(objects);
+      const trackedObjectIDs = Object.keys(objects.value);
       const shouldRefresh = ids !== undefined
         ? ids.filter(id => trackedObjectIDs.includes(id)).length > 0
-        : false;
+        : true;
       if (shouldRefresh) {
         objects.refresh();
       }
     });
 
     return { objects: objects.value };
+  }
+
+  const useOne: UseOneHook<C> =
+  <M extends Model, IDType extends AnyIDType>
+  (modelName: keyof A["data"], objectID: IDType | null) => {
+    /* Queries data for specified model, listens for update events and updates the dataset. */
+
+    const object = useIPCValue<{ objectID: IDType | null }, { object: M | null }>
+    (`model-${modelName}-read-one`, { object: null as M | null }, { objectID });
+
+    useIPCEvent<{ ids?: string[] }>(`model-${modelName}-objects-changed`, function ({ ids }) {
+      const shouldRefresh = ids !== undefined
+        ? ids.includes(`${objectID}`)
+        : true;
+      if (shouldRefresh) {
+        object.refresh();
+      }
+    });
+
+    return { object: object.value.object };
   }
 
   // Fetch top-level UI component class and render it.
@@ -132,7 +219,10 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
 
     return {
       root: appRoot,
-      useData,
+      useCount,
+      useIDs,
+      useMany,
+      useOne,
     };
 
   } else {
