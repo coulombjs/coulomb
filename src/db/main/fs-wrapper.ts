@@ -71,7 +71,7 @@ export abstract class AbstractLockingFilesystemWrapper<T> implements FilesystemW
   private fileAccessLock: AsyncLock;
 
   constructor(public baseDir: string) {
-    this.fileAccessLock = new AsyncLock();
+    this.fileAccessLock = new AsyncLock({ maxPending: 100000 });
   }
 
   public expandPath(objID: string) {
