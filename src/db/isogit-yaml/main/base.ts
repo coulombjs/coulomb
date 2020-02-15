@@ -295,7 +295,7 @@ class Backend extends VersionedFilesystemBackend {
 
     const orphanFilePaths = (await this.readUncommittedFileInfo()).
     map(fileinfo => fileinfo.path).
-    filter(filepath => this.managers.map(mgr => mgr.managesFileAtPath(filepath)).indexOf(true) >= 0);
+    filter(filepath => this.managers.map(mgr => mgr.managesFileAtPath(filepath)).indexOf(true) < 0);
 
     if (orphanFilePaths.length > 0) {
       log.warn("C/db/isogit-yaml: Resetting orphaned files", orphanFilePaths);
