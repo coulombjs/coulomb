@@ -88,17 +88,17 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
     statusIntent = "danger";
     action = onShowSettingsWindow;
 
-  } else if (status.needsPassword) {
-    statusIcon = "lock";
-    tooltipText = "Password required";
-    statusIntent = "primary";
-    action = onTogglePasswordPrompt;
-
   } else if (status.isOnline !== true) {
     statusIcon = "offline";
     tooltipText = "Offline"
     statusIntent = "danger";
     action = onRequestSync;
+
+  } else if (status.needsPassword) {
+    statusIcon = "lock";
+    tooltipText = "Password required";
+    statusIntent = "primary";
+    action = onTogglePasswordPrompt;
 
   } else if (status.hasLocalChanges) {
     statusIcon = "git-commit";
