@@ -123,4 +123,4 @@ interface IPCHook<T> {
 }
 
 
-const ipcEndpointRequestLock = new AsyncLock();
+const ipcEndpointRequestLock = new AsyncLock({ maxPending: 100000 });
