@@ -2,7 +2,7 @@ import { ipcRenderer } from 'electron';
 import * as log from 'electron-log';
 
 import React, { useEffect, useState } from 'react';
-import { Spinner } from '@blueprintjs/core';
+import { H4, FormGroup, Classes } from '@blueprintjs/core';
 
 import { AppConfig, DatabaseInfo } from '../../config/app';
 import { RendererConfig, DatabaseStatusComponentProps } from '../../config/renderer';
@@ -91,21 +91,22 @@ export const DBStatus: React.FC<DBStatusProps> = function ({ dbName, meta, backe
     log.silly("Using widget", BackendDetails);
   }
 
-  const backendType = description.value?.verboseName;
+  const backendData = description.value;
+
+  const backendView: JSX.Element = backendData !== null
+    ? <span className={styles.backendType} title={backendData.verboseNameLong}>
+        {backendData.verboseName}
+      </span>
+    : <span className={Classes.SKELETON}>Loading…</span>;
 
   return (
-    <div className={`
-        ${styles.base}
-        ${BackendDetails === null ? styles.widgetLoading : ''}
-        ${description.value === null ? styles.descriptionLoading : ''}`}>
-
-      <div className={styles.dbLabel}>
-        <span className={styles.dbName}>{meta.verboseName}</span>
-
-        {backendType
-          ? <span className={styles.backendType}>{backendType}</span>
-          : null}
-      </div>
+    <FormGroup
+        className={`
+          ${styles.base}
+          ${BackendDetails === null ? styles.widgetLoading : ''}
+          ${description.value === null ? styles.descriptionLoading : ''}`}
+        label={meta.verboseName}
+        labelInfo={backendView}>
 
       <div className={styles.backendDetails}>
         {description.value !== null && BackendDetails !== null
@@ -113,8 +114,8 @@ export const DBStatus: React.FC<DBStatusProps> = function ({ dbName, meta, backe
               dbIPCPrefix={ipcPrefix}
               status={status || description.value?.status}
               description={description.value} />
-          : <Spinner />}
+          : <div className={Classes.SKELETON}>Loading…</div>}
       </div>
-    </div>
+    </FormGroup>
   );
 };

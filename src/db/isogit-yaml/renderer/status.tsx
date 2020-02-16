@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-import { Button, IconName, FormGroup, InputGroup, Intent, Popover, Position } from '@blueprintjs/core';
+import { Button, IconName, FormGroup, InputGroup, Intent, Popover, Position, ButtonGroup } from '@blueprintjs/core';
 
 import { openWindow } from '../../../api_legacy/renderer';
 import { callIPC, useIPCValue } from '../../../ipc/renderer';
@@ -15,6 +15,10 @@ const BackendDetails: React.FC<DatabaseStatusComponentProps<BackendDescription, 
 function ({ dbIPCPrefix, status, description }) {
   const ipcPrefix = dbIPCPrefix;
 
+  const numUncommitted = 
+    useIPCValue(`${ipcPrefix}-count-uncommitted`, { numUncommitted: 0 }).
+    value.numUncommitted;
+
   useEffect(() => {
     openPasswordPrompt(status.needsPassword);
   }, [status.needsPassword]);
@@ -26,36 +30,42 @@ function ({ dbIPCPrefix, status, description }) {
   }
 
   return (
-    <div className={styles.base}>
-      <Button
-          minimal={true}
-          small={true}
-          className={styles.sourceInfo}
-          onClick={() => callIPC('open-arbitrary-window', {
-            url: description.gitRepo,
-            title: "Git repository"
-          })}>
-        {description.gitUsername}@{description.gitRepo}
-      </Button>
+    <Popover
+        boundary="viewport"
+        isOpen={passwordPromptIsOpen}
+        position={Position.BOTTOM}
+        targetTagName="div"
+        targetClassName={styles.base}
+        content={
+          <PasswordPrompt onConfirm={async (password) => {
+            setPassword(password);
+            openPasswordPrompt(false);
+          }} />
+        }>
+      <ButtonGroup fill vertical alignText="left">
+        <Button
+            className={styles.sourceInfo}
+            title={`${description.gitUsername}@${description.gitRepo}`}
+            icon="git-repo"
+            onClick={() => {
+              if (description.gitRepo) {
+                require('electron').shell.openExternal(description.gitRepo);
+              }
+            }}>
+          {description.gitUsername}@{description.gitRepo}
+        </Button>
 
-      <Popover minimal={true} content={
-          <PasswordPrompt
-            onConfirm={async (password) => { await setPassword(password); openPasswordPrompt(false); }} />}
-            position={Position.TOP_RIGHT}
-            isOpen={passwordPromptIsOpen}>
         <ActionableStatus
           status={status}
-          uncommittedFileCount={
-            useIPCValue(`${ipcPrefix}-count-uncommitted`, { numUncommitted: 0 }).
-            value.numUncommitted}
+          uncommittedFileCount={numUncommitted}
           onRequestSync={async () => await callIPC(`${ipcPrefix}-git-trigger-sync`)}
           onDiscardUnstaged={async () => await callIPC(`${ipcPrefix}-git-discard-unstaged`)}
-          onTogglePasswordPrompt={() => openPasswordPrompt(!passwordPromptIsOpen)}
+          onPromptPassword={() => openPasswordPrompt(true)}
           onShowCommitWindow={() => openWindow('batch-commit')}
           onShowSettingsWindow={() => openWindow('settings')}
         />
-      </Popover>
-    </div>
+      </ButtonGroup>
+    </Popover>
   );
 };
 
@@ -67,14 +77,14 @@ interface ActionableStatusProps {
   uncommittedFileCount: number
   onRequestSync: () => Promise<void>
   onDiscardUnstaged: () => Promise<void>
-  onTogglePasswordPrompt: () => void
+  onPromptPassword: () => void
   onShowCommitWindow: () => void
   onShowSettingsWindow: () => void
 }
 const ActionableStatus: React.FC<ActionableStatusProps> = function ({
     status, uncommittedFileCount,
     onRequestSync, onDiscardUnstaged,
-    onTogglePasswordPrompt,
+    onPromptPassword,
     onShowCommitWindow, onShowSettingsWindow }) {
 
   let statusIcon: IconName;
@@ -84,25 +94,25 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
 
   if (status.isMisconfigured) {
     statusIcon = "error";
-    tooltipText = "Configuration required; click to resolve";
+    tooltipText = "Configure…";
     statusIntent = "danger";
     action = onShowSettingsWindow;
 
   } else if (status.isOnline !== true) {
     statusIcon = "offline";
-    tooltipText = "Offline"
+    tooltipText = "Offline (click to retry)"
     statusIntent = "danger";
     action = onRequestSync;
 
   } else if (status.needsPassword) {
     statusIcon = "lock";
-    tooltipText = "Password required";
+    tooltipText = "Provide password…";
     statusIntent = "primary";
-    action = onTogglePasswordPrompt;
+    action = onPromptPassword;
 
   } else if (status.hasLocalChanges) {
     statusIcon = "git-commit";
-    tooltipText = "Uncommitted changes; click to resolve";
+    tooltipText = "Commit outstanding changes…";
     statusIntent = "warning";
     action = async () => {
       if (status.hasLocalChanges && uncommittedFileCount < 1) {
@@ -128,7 +138,7 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
 
   } else if (status.statusRelativeToLocal === 'diverged') {
     statusIcon = "git-branch"
-    tooltipText = "Diverging changes present; click to retry";
+    tooltipText = "Diverging changes";
     statusIntent = "danger";
     action = onRequestSync;
 
@@ -149,8 +159,6 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
     <Button
         className={styles.backendStatus}
         onClick={action || (() => {})}
-        small={true}
-        minimal={true}
         icon={statusIcon}
         intent={statusIntent}
         disabled={action === null}
@@ -177,7 +185,7 @@ const PasswordPrompt: React.FC<{ onConfirm: (value: string) => Promise<void> }> 
           value.trim() === ''
           ? undefined
           : <Button
-                minimal={true}
+                minimal
                 onClick={async () => await onConfirm(value)}
                 icon="tick"
                 intent="primary">

@@ -93,7 +93,8 @@ class Backend extends VersionedFilesystemBackend {
 
   public async describe(): Promise<BackendDescription> {
     return {
-      verboseName: "Git-versioned YAML file tree",
+      verboseName: "Git+YAML",
+      verboseNameLong: "Git-versioned YAML file tree",
       gitRepo: this.opts.repoURL,
       gitUsername: this.opts.username,
       status: this.git.getStatus(),
