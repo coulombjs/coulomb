@@ -35,6 +35,7 @@ export const LangSelector: React.FC<LangSelectorProps> = function ({ value, disa
     <ButtonGroup {...groupProps}>
       {Object.keys(cfg.available).map((langId: string) =>
         <LangSelectorButton
+          key={langId}
           id={langId}
           title={cfg.available[langId]}
           isSelected={langId === cfg.selected}
