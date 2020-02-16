@@ -1,0 +1,12 @@
+:local .dbLabel {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  font-size: 120%;
+}
+
+:local .backendType {
+  opacity: .5;
+  font-size: 80%;
+  margin-left: .5rem;
+}
