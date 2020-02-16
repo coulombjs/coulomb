@@ -30,6 +30,7 @@ interface AppRenderer<C extends RendererConfig<any>> {
 
 interface UseManyHookResult<M extends Model> {
   objects: Index<M>
+  isUpdating: boolean
 }
 type UseManyHook<C extends RendererConfig<any>> =
 <M extends Model, Q extends object>
@@ -37,6 +38,7 @@ type UseManyHook<C extends RendererConfig<any>> =
 
 interface UseIDsHookResult<IDType extends AnyIDType> {
   ids: IDType[]
+  isUpdating: boolean
 }
 type UseIDsHook<C extends RendererConfig<any>> =
 <IDType extends AnyIDType, Q extends object>
@@ -44,6 +46,7 @@ type UseIDsHook<C extends RendererConfig<any>> =
 
 interface UseCountHookResult {
   count: number
+  isUpdating: boolean
 }
 type UseCountHook<C extends RendererConfig<any>> =
 <Q extends object>
@@ -51,6 +54,7 @@ type UseCountHook<C extends RendererConfig<any>> =
 
 interface UseOneHookResult<M extends Model> {
   object: M | null
+  isUpdating: boolean
 }
 type UseOneHook<C extends RendererConfig<any>> =
 <M extends Model, IDType extends AnyIDType>
@@ -101,7 +105,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       //}
     });
 
-    return { ids: trackedIDs.value.ids };
+    return { ids: trackedIDs.value.ids, isUpdating: trackedIDs.isUpdating };
   }
 
   const useCount: UseCountHook<C> =
@@ -116,7 +120,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       count.refresh();
     });
 
-    return { count: count.value.count };
+    return { count: count.value.count, isUpdating: count.isUpdating };
   }
 
   const useMany: UseManyHook<C> =
@@ -143,7 +147,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       // }
     });
 
-    return { objects: objects.value };
+    return { objects: objects.value, isUpdating: objects.isUpdating };
   }
 
   const useOne: UseOneHook<C> =
@@ -161,7 +165,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       }
     });
 
-    return { object: object.value.object };
+    return { object: object.value.object, isUpdating: object.isUpdating };
   }
 
   // Fetch top-level UI component class and render it.
