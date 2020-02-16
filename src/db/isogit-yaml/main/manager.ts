@@ -58,7 +58,7 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
   }
 
   public async count(query?: Q) {
-    return (await this.db.listIDs({ subdir: this.managerConfig.workDir })).length;
+    return (await this.listIDs(query)).length;
   }
 
 
