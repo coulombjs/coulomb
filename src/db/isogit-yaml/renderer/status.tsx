@@ -94,25 +94,25 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
 
   if (status.isMisconfigured) {
     statusIcon = "error";
-    tooltipText = "Configure…";
+    tooltipText = "Configure";
     statusIntent = "danger";
     action = onShowSettingsWindow;
 
   } else if (status.isOnline !== true) {
     statusIcon = "offline";
-    tooltipText = "Offline (click to retry)"
+    tooltipText = "Offline"
     statusIntent = "danger";
-    action = onRequestSync;
+    action = status.needsPassword ? onPromptPassword : onRequestSync;
 
   } else if (status.needsPassword) {
     statusIcon = "lock";
-    tooltipText = "Provide password…";
+    tooltipText = "Provide password";
     statusIntent = "primary";
     action = onPromptPassword;
 
   } else if (status.hasLocalChanges) {
     statusIcon = "git-commit";
-    tooltipText = "Commit outstanding changes…";
+    tooltipText = "Commit outstanding";
     statusIntent = "warning";
     action = async () => {
       if (status.hasLocalChanges && uncommittedFileCount < 1) {
