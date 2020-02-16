@@ -64,6 +64,9 @@ export const DBStatus: React.FC<DBStatusProps> = function ({ dbName, meta, backe
   const [BackendDetails, setBackendDetailsComponent] = useState(null as (null | (() => UnknownDBStatusComponent)));
   const ipcPrefix = `db-${dbName}`;
 
+  // TODO: Redo pluggable backend widget? Move most of the presentation here;
+  // make backend provide context provider component with actions & info.
+
   useEffect(() => {
     // Fetch component configured to display this DB status appropriately
     (async () => {

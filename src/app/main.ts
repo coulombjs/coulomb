@@ -55,6 +55,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     return openWindow({
       ...openerParams,
       component: windowName,
+      config: config.app,
     });
   }
 
@@ -117,7 +118,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   }
 
   const isMacOS = process.platform === 'darwin';
-  const isDevelopment = process.env.NODE_ENV !== 'production';
+  const isDevelopment = process.env.NODE_ENV !== 'production' || config.app.forceDevelopmentMode;
 
   const settings = new SettingManager(config.appDataPath, config.settingsFileName);
   settings.setUpIPC();
@@ -137,7 +138,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     async ([dbName, dbConf]) => {
       log.debug("C/initMain: DB: Reading backend config", dbName, dbConf);
 
-      const DBBackendClass = (await dbConf.backend()).default;
+      const DBBackendClass = dbConf.backend;
       if (DBBackendClass.registerSettingsForConfigurableOptions) {
         DBBackendClass.registerSettingsForConfigurableOptions(settings, dbConf.options, dbName);
       }
@@ -218,7 +219,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
       log.verbose("C/initMain: Initializing model manager for DB", managerConf.dbName, databases);
 
       const db = databases[managerConf.dbName];
-      const ManagerClass = (await managerConf.options.cls()).default;
+      const ManagerClass = managerConf.options.cls;
       const manager = new ManagerClass(
         db, managerConf.options, modelInfo,
         async (changedIDs?: any[]) => await reportModifiedDataToAllWindows(modelName, changedIDs?.map(id => `${id}`)));
@@ -253,6 +254,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     makeWindowEndpoint(windowName, () => ({
       ...(window as Window).openerParams,
       component: windowName,
+      config: config.app,
     }));
   }
 
@@ -267,7 +269,8 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   // might let us make authentication data entry
   // part of required settings entry
   // and start data source initialization early.
-  for (const backend of Object.values(databases)) {
+  for (const [backendID, backend] of Object.entries(databases)) {
+    log.debug("C/initMain: Initializing DB backend", backendID);
     await backend.init();
   }
 
@@ -296,6 +299,7 @@ async function reportBackendStatusToAllWindows(dbName: string, payload: object) 
 async function reportModifiedDataToAllWindows(modelName: string, changedIDs?: string[]) {
   // TODO: If too many update calls with one ID affect performance,
   // debounce this function, combining shorter ID lists and reporting more of them at once
+  console.debug("Reporting modified data", modelName, changedIDs)
   return await notifyAllWindows(`model-${modelName}-objects-changed`, { ids: changedIDs });
 }
 

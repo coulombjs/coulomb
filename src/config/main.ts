@@ -27,7 +27,7 @@ export interface MainConfig<App extends AppConfig> {
 // Databases
 
 interface DatabaseConfig {
-  backend: () => Promise<{ default: DatabaseBackendClass<any, any, any> }>
+  backend: DatabaseBackendClass<any, any, any>
 
   // If not all options are supplied in configuration in code,
   // the missing ones will be required from the user via initial configuration window.
@@ -55,7 +55,7 @@ export interface ManagerOptions<M extends Model> {
      TODO: Should be moved into isogit-yaml module. */
 
   // Model manager class resolver
-  cls: () => Promise<{ default: ManagerClass<M, any, any, any> }>
+  cls: ManagerClass<M, any, any, any>
 }
 
 export interface ManagerConfig<M> {

@@ -10,6 +10,7 @@ interface YAMLDirectoryStoreableContents extends YAML {
 
 
 class YAMLDirectoryWrapper extends YAMLWrapper<YAML> {
+  // TODO: Move directory-specific logic into a Manager subclass.
 
   constructor(baseDir: string) { super(baseDir); }
 

@@ -13,6 +13,7 @@ import {
   BackendClass as BaseBackendClass,
   BackendStatusReporter as BaseBackendStatusReporter,
   VersionedFilesystemBackend,
+  ModelManager,
   FilesystemManager,
 } from '../../main/base';
 
@@ -59,7 +60,7 @@ class Backend extends VersionedFilesystemBackend {
   private gitSyncIntervalDelay: number;
   private gitSyncInterval: NodeJS.Timeout | null = null;
   private fs: FilesystemWrapper<any>;
-  private managers: FilesystemManager[];
+  private managers: (FilesystemManager & ModelManager<any, any, any>)[];
 
   constructor(
       private opts: BackendOptions,
@@ -88,10 +89,6 @@ class Backend extends VersionedFilesystemBackend {
 
     this.gitSyncIntervalDelay = opts.syncInterval || DEFAULT_SYNC_INTERVAL;
     this.synchronize = this.synchronize.bind(this);
-  }
-
-  public async listIDs(query: { subdir: string }) {
-    return await this.fs.listIDs({ subdir: query.subdir });
   }
 
   public async describe(): Promise<BackendDescription> {
@@ -186,41 +183,57 @@ class Backend extends VersionedFilesystemBackend {
     }
   }
 
-  public async registerManager(manager: FilesystemManager) {
+  public async registerManager(manager: FilesystemManager & ModelManager<any, any, any>) {
     this.managers.push(manager);
   }
 
   public async init(forceReset = false) {
     let doInitialize: boolean;
 
-    if (forceReset === true) {
-      log.warn("C/db/isogit-yaml: Git is being force reinitialized");
+    try {
+      if (forceReset === true) {
+        log.warn("C/db/isogit-yaml: Git is being force reinitialized");
+        doInitialize = true;
+      } else if (!(await this.git.isUsingRemoteURLs({
+          origin: this.opts.repoURL,
+          upstream: this.opts.upstreamRepoURL}))) {
+        log.warn("C/db/isogit-yaml: Git has mismatching remote URLs, reinitializing");
+        doInitialize = true;
+      } else {
+        log.info("C/db/isogit-yaml: Git is already initialized");
+        doInitialize = false;
+      }
+    } catch (e) {
       doInitialize = true;
-    } else if (!(await this.git.isUsingRemoteURLs({
-        origin: this.opts.repoURL,
-        upstream: this.opts.upstreamRepoURL}))) {
-      log.warn("C/db/isogit-yaml: Git has mismatching remote URLs, reinitializing");
-      doInitialize = true;
-    } else {
-      log.info("C/db/isogit-yaml: Git is already initialized");
-      doInitialize = false;
     }
 
     if (doInitialize) {
       await this.git.destroy();
     }
 
-    await this.synchronize();
-
     if (this.gitSyncInterval) {
       clearInterval(this.gitSyncInterval);
     }
 
     this.gitSyncInterval = setInterval(this.synchronize, this.gitSyncIntervalDelay);
+
+    await this.synchronize();
   }
 
   public async read(objID: string, metaFields?: string[]) {
     return await this.fs.read(this.getRef(objID), metaFields) as object;
+  }
+
+  public async readVersion(objID: string, version: string) {
+    // NOTE: This will fail with YAMLDirectoryWrapper.
+    // objID must refer to a single file.
+
+    // TODO: Support compound objects (directories)
+    // by moving the file data parsing logic into manager
+    // and adding Backend.readTree().
+
+    const blob = await this.git.readFileBlobAtCommit(this.getRef(objID), version);
+    return this.fs.parseData(blob);
   }
 
   public async create<O extends Record<string, any>>(obj: O, objPath: string, metaFields?: (keyof O)[]) {
@@ -267,20 +280,26 @@ class Backend extends VersionedFilesystemBackend {
     });
   }
 
-  public async getIndex(subdir: string, idField: string) {
-    const objs = await this.fs.readAll({ subdir });
+  public async listIDs(query: { subdir: string }) {
+    return await this.fs.listIDs({ subdir: query.subdir });
+  }
+
+  public async getIndex(subdir: string, idField: string, onlyIDs?: string[]) {
+    const idsToSelect = onlyIDs !== undefined
+      ? onlyIDs.map(id => this.getRef(id))
+      : undefined;
+
+    const objs = await this.fs.readAll({ subdir, onlyIDs: idsToSelect });
+
     var idx: Index<any> = {};
     for (const obj of objs) {
       idx[`${obj[idField]}`] = obj;
     }
+
     return idx;
   }
 
   public async update(objID: string, newData: Record<string, any>, idField: string) {
-    if (objID !== newData[idField]) {
-      throw new Error("Updating object IDs is not supported at the moment.");
-    }
-
     await this.fs.write(this.getRef(objID), newData);
   }
 
@@ -319,8 +338,12 @@ class Backend extends VersionedFilesystemBackend {
     return `${objID}`;
   }
 
-  private synchronize() {
-    this.git.synchronize();
+  private async synchronize() {
+    await this.git.synchronize();
+
+    for (const mgr of this.managers) {
+      mgr.reportUpdatedData();
+    }
   }
 
   private async checkUncommitted() {

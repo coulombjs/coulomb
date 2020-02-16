@@ -28,7 +28,7 @@ export interface FilesystemWrapper<T> {
 
   listIDs(query: { subdir?: string }, ...listArgs: any[]): Promise<string[]>;
 
-  readAll(query: { subdir?: string }, ...readArgs: any[]): Promise<T[]>;
+  readAll(query: { subdir?: string, onlyIDs?: string[] }, ...readArgs: any[]): Promise<T[]>;
   /* Scan filesystem and returns all the objects found. */
 
   write(objID: string, newData: T | undefined, ...args: any[]): Promise<FilesystemPath[]>;
@@ -105,12 +105,18 @@ export abstract class AbstractLockingFilesystemWrapper<T> implements FilesystemW
     return ids;
   }
 
-  public async readAll(query: { subdir?: string }, ...readArgs: any[]) {
-    const objIDs = await this.listIDs(query);
+  public async readAll(query: { subdir?: string, onlyIDs?: string[] }, ...readArgs: any[]) {
+    var objIDs = await this.listIDs(query);
+
+    if (query.onlyIDs !== undefined) {
+      objIDs = objIDs.filter(id => query.onlyIDs?.includes(id));
+    }
+
     var objs = [];
     for (const objID of objIDs) {
       objs.push(await this.read(objID, ...readArgs));
     }
+
     return objs;
   }
 

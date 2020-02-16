@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-import { Button, IconName, Tooltip, FormGroup, InputGroup, Intent, Text, Popover, Position } from '@blueprintjs/core';
+import { Button, IconName, FormGroup, InputGroup, Intent, Popover, Position } from '@blueprintjs/core';
 
 import { openWindow } from '../../../api_legacy/renderer';
 import { callIPC, useIPCValue } from '../../../ipc/renderer';

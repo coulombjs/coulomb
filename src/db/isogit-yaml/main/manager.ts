@@ -1,4 +1,4 @@
-//import * as log from 'electron-log';
+import * as log from 'electron-log';
 import * as path from 'path';
 
 import { listen } from '../../../ipc/main';
@@ -30,17 +30,22 @@ export interface ManagerOptions<M extends Model> extends BaseManagerOptions<M> {
 }
 
 
-class Manager<M extends Model, IDType extends AnyIDType, Q extends object = object>
+interface BasicQuery<IDType extends AnyIDType> {
+  onlyIDs?: IDType[]
+}
+
+
+class Manager<M extends Model, IDType extends AnyIDType, Q extends BasicQuery<IDType> = BasicQuery<IDType>>
 extends ModelManager<M, IDType, Q> implements FilesystemManager {
 
   constructor(
       private db: Backend,
       private managerConfig: ManagerOptions<M>,
       private modelInfo: ModelInfo,
-      private reportUpdatedData: ManagedDataChangeReporter<IDType>) {
+      public reportUpdatedData: ManagedDataChangeReporter<IDType>) {
     super();
 
-    db.registerManager(this as FilesystemManager);
+    db.registerManager(this);
   }
 
   public managesFileAtPath(filePath: string) {
@@ -113,15 +118,19 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
     }
   }
 
-  public async readAll() {
+  public async readAll(query?: Q) {
     var idx: Index<M> = await this.db.getIndex(
       this.managerConfig.workDir,
-      this.managerConfig.idField as string);
+      this.managerConfig.idField as string,
+      query?.onlyIDs !== undefined
+        ? query.onlyIDs.map(id => this.getDBRef(id))
+        : undefined);
     return idx;
   }
 
   public async update(objID: IDType, newData: M, commit: boolean | string = false) {
     if (objID !== newData[this.managerConfig.idField]) {
+      log.error("Attempt to update object ID", objID, newData);
       throw new Error("Updating object IDs is not supported at the moment.");
     }
 
@@ -133,6 +142,7 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
         commit !== true ? commit : null,
         'update',
         newData);
+
       await this.reportUpdatedData([objID]);
     }
   }
@@ -212,6 +222,12 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
     listen<{}, IDType[]>
     (`${prefix}-read-uncommitted-ids`, async () => {
       return await this.listUncommitted();
+    });
+
+    listen<{ objectID: IDType }, { modified: boolean }>
+    (`${prefix}-get-modified-status`, async ({ objectID }) => {
+      log.debug("C/isogit-yaml: Requesting modified status", objectID);
+      return { modified: (await this.listUncommitted()).includes(objectID) };
     });
 
     listen<

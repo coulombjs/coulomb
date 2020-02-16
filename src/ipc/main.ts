@@ -37,7 +37,7 @@ export function listen<I extends object, O extends object>
       response = { errors: [`${e.message}`], result: undefined };
     }
 
-    log.debug(`C/ipc: handled request to ${name}`);
+    //log.silly(`C/ipc: handled request to ${name}`);
 
     return JSON.stringify(response);
   });

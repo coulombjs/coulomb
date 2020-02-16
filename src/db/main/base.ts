@@ -126,12 +126,13 @@ export abstract class ModelManager<M extends Model, IDType extends AnyIDType, Q 
      but limits their scope only to objects manipulated by this manager. */
 
   abstract count(query?: Q): Promise<number>
+  abstract reportUpdatedData: ManagedDataChangeReporter<IDType>
 
   abstract listIDs(query?: Q): Promise<IDType[]>
   // TODO: Returned IDs cannot automatically be cast to IDType;
   // get rid of IDType generic and manage types in subclasses?
 
-  abstract readAll(query: Q): Promise<Index<M>>
+  abstract readAll(query?: Q): Promise<Index<M>>
   abstract read(id: IDType): Promise<M>
   abstract create(obj: M, ...args: any[]): Promise<void>
   abstract update(objID: IDType, obj: M, ...args: any[]): Promise<void>
@@ -151,7 +152,7 @@ export abstract class ModelManager<M extends Model, IDType extends AnyIDType, Q 
     listen<{ query?: Q }, { count: number }>
     (`${prefix}-count`, async ({ query }) => ({ count: await this.count(query) }));
 
-    listen<{ query: Q }, Index<M>>
+    listen<{ query?: Q }, Index<M>>
     (`${prefix}-read-all`, async ({ query }) => this.readAll(query));
 
     listen<{ objectID: IDType | null }, { object: M | null }>
@@ -161,6 +162,12 @@ export abstract class ModelManager<M extends Model, IDType extends AnyIDType, Q 
       } else {
         return { object: await this.read(objectID) };
       }
+    });
+
+    listen<{ objectID: IDType, object: M, commit: boolean }, { success: true }>
+    (`${prefix}-update-one`, async ({ objectID, object, commit }) => {
+      await this.update(objectID, object, commit);
+      return { success: true };
     });
   }
 }
@@ -179,7 +186,7 @@ export class CommitError extends Error {
 
 export abstract class VersionedFilesystemBackend extends VersionedBackend<string> {
 
-  abstract getIndex(idField: string, subdir: string): Promise<Index<any>>
+  abstract getIndex(idField: string, subdir: string, onlyIDs?: string[]): Promise<Index<any>>
 
   abstract registerManager(manager: FilesystemManager): void
   /* Enables instances of this backend to keep track of managers,

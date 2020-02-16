@@ -2,6 +2,8 @@ import * as path from 'path'
 import { format as formatUrl } from 'url';
 import { BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron';
 
+import { AppConfig } from '../config/app';
+
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isMacOS = process.platform === 'darwin';
@@ -15,29 +17,33 @@ var windowsByTitle: { [title: string]: BrowserWindow } = {};
 
 // Open new window, or focus if one with the same title already exists
 export interface WindowOpenerParams {
-  title: string,
-  url?: string,
-  component?: string,
-  componentParams?: string,
+  title: string
+  url?: string
+  component?: string
+  componentParams?: string
   dimensions?: {
-    minHeight?: number,
-    minWidth?: number,
-    height?: number,
-    width?: number,
-    maxHeight?: number,
-    maxWidth?: number,
-  },
-  frameless?: boolean,
-  winParams?: any,
-  menuTemplate?: MenuItemConstructorOptions[],
-  ignoreCache?: boolean,
+    minHeight?: number
+    minWidth?: number
+    height?: number
+    width?: number
+    maxHeight?: number
+    maxWidth?: number
+  }
+  frameless?: boolean
+  winParams?: any
+  menuTemplate?: MenuItemConstructorOptions[]
+  ignoreCache?: boolean
+  showWhileLoading?: boolean
+  config: AppConfig
 }
 export type WindowOpener = (props: WindowOpenerParams) => Promise<BrowserWindow>;
 export const openWindow: WindowOpener = async ({
     title,
     url, component, componentParams,
     dimensions, frameless,
-    winParams, menuTemplate, ignoreCache }) => {
+    winParams, menuTemplate, ignoreCache,
+    showWhileLoading,
+    config }) => {
 
   if ((component || '').trim() === '' && (url || '').trim() === '') {
     throw new Error("openWindow() requires either `component` or `url`");
@@ -67,9 +73,9 @@ export const openWindow: WindowOpener = async ({
 
   if (component) {
     const params = `c=${component}&${componentParams ? componentParams : ''}`;
-    window = await createWindowForLocalComponent(title, params, _winParams);
+    window = await createWindowForLocalComponent(title, params, _winParams, showWhileLoading === true, config.forceDevelopmentMode || false);
   } else if (url) {
-    window = await createWindow(title, url, _winParams, ignoreCache);
+    window = await createWindow(title, url, _winParams, showWhileLoading === true, ignoreCache);
   } else {
     throw new Error("Either component or url must be given to openWindow()");
   }
@@ -124,7 +130,13 @@ function cleanUpWindows() {
 }
 
 
-function createWindowForLocalComponent(title: string, params: string, winParams: any): Promise<BrowserWindow> {
+async function createWindowForLocalComponent(
+    title: string,
+    params: string,
+    winParams: any,
+    showWhileLoading: boolean,
+    forceDebug: boolean): Promise<BrowserWindow> {
+
   let url: string;
 
   if (isDevelopment) {
@@ -138,28 +150,38 @@ function createWindowForLocalComponent(title: string, params: string, winParams:
     })}?${params}`;
   }
 
-  return createWindow(title, url, winParams);
+  const window = await createWindow(title, url, winParams, showWhileLoading, forceDebug);
+
+  if (forceDebug) {
+    window.webContents.openDevTools();
+  }
+
+  return window;
 }
 
 
-function createWindow(title: string, url: string, winParams: any, ignoreCache: boolean = false): Promise<BrowserWindow> {
+async function createWindow(
+    title: string,
+    url: string,
+    winParams: any,
+    showWhileLoading: boolean,
+    ignoreCache: boolean = false): Promise<BrowserWindow> {
+
   const window = new BrowserWindow({
     webPreferences: {nodeIntegration: true},
     title: title,
-    show: false,
+    show: showWhileLoading === true,
     ...winParams
   });
 
   const promise = new Promise<BrowserWindow>((resolve, reject) => {
     window.once('ready-to-show', () => {
-      window.show();
+      if (showWhileLoading !== true) {
+        window.show();
+      }
       resolve(window);
     });
   });
-
-  if (isDevelopment) {
-    window.webContents.openDevTools();
-  }
 
   if (ignoreCache) {
     window.loadURL(url, {'extraHeaders': 'pragma: no-cache\n'});

@@ -1,5 +1,6 @@
 /* Wraps IPC communication in React hooks & locking queue. */
 
+import { debounce } from 'throttle-debounce';
 import AsyncLock from 'async-lock';
 import * as log from 'electron-log';
 import { ipcRenderer } from 'electron';
@@ -31,6 +32,7 @@ export function useIPCEvent<P extends object>
 
   useEffect(() => {
     function handleEvent(evt: Electron.Event, payload: P) {
+      log.debug("Handling IPC event", endpointName);
       handler(payload);
     }
     ipcRenderer.on(endpointName, handleEvent);
@@ -48,12 +50,14 @@ export function useIPCValue<I extends object, O>
 
   const [value, updateValue] = useState(initialValue);
   const [errors, updateErrors] = useState([] as string[]);
+
   const [reqCounter, updateReqCounter] = useState(0);
   const payloadSnapshot = JSON.stringify(payload || {});
 
   useEffect(() => {
-    (async () => {
-      const cacheKey = `${endpointName}${reqCounter}${payloadSnapshot}`;
+    const cacheKey = `${endpointName}${reqCounter}${payloadSnapshot}`;
+
+    const doQuery = debounce(400, async () => {
 
       let resp: string;
       const cachedResp = cache[cacheKey];
@@ -62,7 +66,7 @@ export function useIPCValue<I extends object, O>
         resp = cachedResp;
       } else {
         //(async () => {
-        updateValue(initialValue);
+        //updateValue(initialValue);
 
         resp = await ipcEndpointRequestLock.acquire(endpointName, async function () {
           const payloadToSend = JSON.stringify(payload || {});
@@ -90,7 +94,9 @@ export function useIPCValue<I extends object, O>
       } else {
         updateValue(data as O);
       }
-    })();
+    });
+
+    doQuery();
   }, [reqCounter, payloadSnapshot]);
 
   return {

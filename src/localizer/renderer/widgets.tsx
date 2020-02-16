@@ -1,14 +1,14 @@
 import React, { useContext } from 'react';
-import { Icon } from '@blueprintjs/core';
+import { Button, ButtonGroup, IButtonGroupProps } from '@blueprintjs/core';
 
 import { Translatable } from '../types';
 
 import { LangConfigContext } from './context';
 
-import styles from './styles.scss';
 
-
-interface TranslatableComponentProps { what: Translatable<string> }
+interface TranslatableComponentProps {
+  what: Translatable<string>
+}
 export const Trans: React.FC<TranslatableComponentProps> = function ({ what }) {
   const lang = useContext(LangConfigContext);
   const translated = what[lang.selected];
@@ -24,59 +24,45 @@ export const Trans: React.FC<TranslatableComponentProps> = function ({ what }) {
 
 
 interface LangSelectorProps {
-  value?: Translatable<any>,
+  value?: Translatable<any>
+  disableUnlessTranslated?: boolean
+  groupProps?: IButtonGroupProps
 }
-export const LangSelector: React.FC<LangSelectorProps> = function ({ value }) {
+export const LangSelector: React.FC<LangSelectorProps> = function ({ value, disableUnlessTranslated, groupProps }) {
   const cfg = useContext(LangConfigContext);
 
   return (
-    <p className={styles.langSelector}>
+    <ButtonGroup {...groupProps}>
       {Object.keys(cfg.available).map((langId: string) =>
         <LangSelectorButton
           id={langId}
           title={cfg.available[langId]}
           isSelected={langId === cfg.selected}
           onSelect={() => cfg.select(langId)}
-          hasTranslation={(value !== undefined) ? (value[langId] === undefined) : undefined}
+          disableUnlessTranslated={disableUnlessTranslated}
+          hasTranslation={(value !== undefined) ? (value[langId] !== undefined) : undefined}
         />
       )}
-    </p>
+    </ButtonGroup>
   );
 };
 
 
 interface LangSelectorButtonProps {
-  id: string,
-  title: string,
-  isSelected: boolean,
-  onSelect: () => void,
-  hasTranslation: boolean | undefined,
+  id: string
+  title: string
+  isSelected: boolean
+  onSelect: () => void
+  hasTranslation?: boolean
+  disableUnlessTranslated?: boolean
 }
 const LangSelectorButton: React.FC<LangSelectorButtonProps> = function (props) {
   return (
-    <>
-
-      {props.isSelected
-        ? <strong className={styles.lang}>
-            {props.id}
-          </strong>
-        : <a
-              className={styles.lang}
-              title={`Select ${props.title}`}
-              href="javascript: void 0;"
-              onClick={props.onSelect}>
-            <span>{props.id}</span>
-          </a>}
-
-      {props.hasTranslation === false
-        ? <Icon
-            icon="error"
-            intent="danger"
-            title={`Missing translation for ${props.title}`}
-            htmlTitle={`Missing translation for ${props.title}`}
-          />
-        : ''}
-
-    </>
+    <Button
+        active={props.isSelected}
+        disabled={props.hasTranslation === false && props.disableUnlessTranslated === true}
+        onClick={props.onSelect}>
+      {props.id}
+    </Button>
   );
 };

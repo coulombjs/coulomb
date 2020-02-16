@@ -451,7 +451,7 @@ export class IsoGitWrapper {
 }
 
 
-async function checkOnlineStatus(timeout = 2500): Promise<boolean> {
+async function checkOnlineStatus(timeout = 4500): Promise<boolean> {
   // TODO: Move to general utility functions
   return new Promise((resolve) => {
     log.debug("C/db/isogit: Connection test: Starting");

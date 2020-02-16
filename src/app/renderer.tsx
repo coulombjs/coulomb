@@ -89,13 +89,16 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
     (`model-${modelName}-list-ids`, { ids: [] }, query);
 
     useIPCEvent<{ ids?: string[] }>(`model-${modelName}-objects-changed`, function ({ ids }) {
-      const stringIDs = trackedIDs.value.ids.map(id => `${id}`);
-      const shouldRefresh = ids !== undefined
-        ? ids.filter(id => stringIDs.includes(id)).length > 0
-        : true;
-      if (shouldRefresh) {
-        trackedIDs.refresh();
-      }
+      trackedIDs.refresh();
+
+      // See TODO at useMany().
+      //const stringIDs = trackedIDs.value.ids.map(id => `${id}`);
+      //const shouldRefresh = ids !== undefined
+      //  ? ids.filter(id => stringIDs.includes(id)).length > 0
+      //  : true;
+      //if (shouldRefresh) {
+      //  trackedIDs.refresh();
+      //}
     });
 
     return { ids: trackedIDs.value.ids };
@@ -125,13 +128,19 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
     (`model-${modelName}-read-all`, {}, query);
 
     useIPCEvent<{ ids?: string[] }>(`model-${modelName}-objects-changed`, function ({ ids }) {
-      const trackedObjectIDs = Object.keys(objects.value);
-      const shouldRefresh = ids !== undefined
-        ? ids.filter(id => trackedObjectIDs.includes(id)).length > 0
-        : true;
-      if (shouldRefresh) {
-        objects.refresh();
-      }
+      objects.refresh();
+      // TODO: Only refresh when needed.
+      // Below code works, except it won’t trigger refresh
+      // when new objects are added:
+      // log.silly("C/renderApp: Changed object IDs", ids);
+      // const trackedObjectIDs = Object.keys(objects.value);
+      // const shouldRefresh = ids === undefined || ids.filter(id => trackedObjectIDs.includes(id)).length > 0;
+      // if (shouldRefresh) {
+      //   log.debug("C/renderApp: Refreshing objects", ids);
+      //   objects.refresh();
+      // } else {
+      //   log.debug("C/renderApp: Will not refresh objects", ids);
+      // }
     });
 
     return { objects: objects.value };
@@ -146,9 +155,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
     (`model-${modelName}-read-one`, { object: null as M | null }, { objectID });
 
     useIPCEvent<{ ids?: string[] }>(`model-${modelName}-objects-changed`, function ({ ids }) {
-      const shouldRefresh = ids !== undefined
-        ? ids.includes(`${objectID}`)
-        : true;
+      const shouldRefresh = ids === undefined || ids.includes(`${objectID}`);
       if (shouldRefresh) {
         object.refresh();
       }
