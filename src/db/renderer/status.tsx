@@ -1,8 +1,8 @@
 import { ipcRenderer } from 'electron';
 import * as log from 'electron-log';
 
-import React, { useEffect, useState } from 'react';
-import { H4, FormGroup, Classes } from '@blueprintjs/core';
+import React, { useEffect, useState, useMemo } from 'react';
+import { FormGroup, Classes } from '@blueprintjs/core';
 
 import { AppConfig, DatabaseInfo } from '../../config/app';
 import { RendererConfig, DatabaseStatusComponentProps } from '../../config/renderer';
@@ -27,17 +27,12 @@ function ({ databases, databaseStatusComponents }) {
         () => Promise<UnknownDBStatusComponent>
     }
   };
-  const [dbs, updateDBs] = useState({} as Databases);
 
-  useEffect(() => {
-    (async () => {
-      for (const [dbID, meta] of Object.entries(databases)) {
-        const backendDetailsComponentResolver =
-          async () => (await databaseStatusComponents[dbID]()).default;
-        updateDBs({ ...dbs, [dbID]: { meta, backendDetailsComponentResolver }})
-      }
-    })();
-  }, []);
+  const dbs: Databases = useMemo(() => (Object.entries(databases).map(([dbID, meta]) => {
+    const backendDetailsComponentResolver =
+      async () => (await databaseStatusComponents[dbID]()).default;
+    return { [dbID]: { meta, backendDetailsComponentResolver } };
+  }).reduce((prev, curr) => ({ ...prev, ...curr }))), Object.keys(databases));
 
   return (
     <>
@@ -67,6 +62,12 @@ export const DBStatus: React.FC<DBStatusProps> = function ({ dbName, meta, backe
   // TODO: Redo pluggable backend widget? Move most of the presentation here;
   // make backend provide context provider component with actions & info.
 
+  // Listen to status updates
+  function handleNewStatus(evt: any, newStatus: any) {
+    log.debug("Received new status for DB", dbName, newStatus);
+    updateStatus(newStatus);
+  }
+
   useEffect(() => {
     // Fetch component configured to display this DB status appropriately
     (async () => {
@@ -75,11 +76,6 @@ export const DBStatus: React.FC<DBStatusProps> = function ({ dbName, meta, backe
       setBackendDetailsComponent(() => BackendDetails);
     })();
 
-    // Listen to status updates
-    function handleNewStatus(evt: any, newStatus: any) {
-      log.debug("Received new status for DB", dbName, newStatus);
-      updateStatus(newStatus);
-    }
     ipcRenderer.on(`${ipcPrefix}-status`, handleNewStatus);
     return function cleanup() {
       ipcRenderer.removeListener(`${ipcPrefix}-status`, handleNewStatus);
