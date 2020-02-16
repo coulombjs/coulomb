@@ -50,11 +50,18 @@ export function useIPCValue<I extends object, O>
 
   const [value, updateValue] = useState(initialValue);
   const [errors, updateErrors] = useState([] as string[]);
+  const [isUpdating, setUpdating] = useState(false);
 
   const [reqCounter, updateReqCounter] = useState(0);
   const payloadSnapshot = JSON.stringify(payload || {});
 
   useEffect(() => {
+    setUpdating(false);
+  }, [value]);
+
+  useEffect(() => {
+    setUpdating(true);
+
     const cacheKey = `${endpointName}${reqCounter}${payloadSnapshot}`;
 
     const doQuery = debounce(400, async () => {
@@ -102,6 +109,7 @@ export function useIPCValue<I extends object, O>
   return {
     value: value,
     errors: errors,
+    isUpdating: isUpdating,
     refresh: () => updateReqCounter(counter => { return counter += 1 }),
     _reqCounter: reqCounter,
   };
@@ -147,10 +155,11 @@ export async function relayIPCEvent
 
 
 interface IPCHook<T> {
-  value: T,
-  errors: string[],
-  refresh: () => void,
-  _reqCounter: number,
+  value: T
+  errors: string[]
+  isUpdating: boolean
+  refresh: () => void
+  _reqCounter: number
 }
 
 
