@@ -226,7 +226,6 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
 
     listen<{ objectID: IDType }, { modified: boolean }>
     (`${prefix}-get-modified-status`, async ({ objectID }) => {
-      log.debug("C/isogit-yaml: Requesting modified status", objectID);
       return { modified: (await this.listUncommitted()).includes(objectID) };
     });
 
