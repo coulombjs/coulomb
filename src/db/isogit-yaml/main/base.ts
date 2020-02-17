@@ -1,5 +1,6 @@
 import * as log from 'electron-log';
 import * as fs from 'fs-extra';
+import * as path from 'path';
 
 import { listen } from '../../../ipc/main';
 import { Setting, SettingManager } from '../../../settings/main';
@@ -249,7 +250,7 @@ class Backend extends VersionedFilesystemBackend {
     await this.resetOrphanedFileChanges();
 
     const paths: string[] = (await this.readUncommittedFileInfo()).
-      filter(fileinfo => objIDs.indexOf(fileinfo.path) >= 0).
+      filter(fileinfo => gitPathMatches(objIDs, fileinfo.path)).
       map(fileinfo => fileinfo.path);
 
     if (paths.length > 0) {
@@ -261,7 +262,7 @@ class Backend extends VersionedFilesystemBackend {
 
   public async discard(objIDs: string[]) {
     const paths: string[] = (await this.readUncommittedFileInfo()).
-      filter(fileinfo => objIDs.indexOf(fileinfo.path) >= 0).
+      filter(fileinfo => gitPathMatches(objIDs, fileinfo.path)).
       map(fileinfo => fileinfo.path);
 
     if (paths.length > 0) {
@@ -408,3 +409,18 @@ class Backend extends VersionedFilesystemBackend {
 export const BackendClass: BaseBackendClass<InitialBackendOptions, BackendOptions, BackendStatus> = Backend
 
 export default Backend;
+
+
+function gitPathMatches(objIDs: string[], gitPath: string) {
+  if (objIDs.indexOf(gitPath) >= 0) {
+    return true;
+  }
+  const parsed = path.parse(gitPath);
+
+  // Backend operates file references as paths without extensions.
+  // FS wrapper expands paths, adding extension if necessary.
+  // Git, however, doesn’t know about the extensions.
+  // For YAML files with extensions (not directories),
+  // try comparing with extensions removed.
+  return objIDs.indexOf(path.join(parsed.dir, parsed.name)) >= 0;
+}
