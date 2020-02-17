@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { Button, ButtonGroup, IButtonGroupProps } from '@blueprintjs/core';
+import { Button, ButtonGroup, IButtonGroupProps, IButtonProps } from '@blueprintjs/core';
 
 import { Translatable } from '../types';
 
@@ -25,22 +25,28 @@ export const Trans: React.FC<TranslatableComponentProps> = function ({ what }) {
 
 interface LangSelectorProps {
   value?: Translatable<any>
-  disableUnlessTranslated?: boolean
   groupProps?: IButtonGroupProps
+  exclude?: string[]
+  untranslatedProps?: IButtonProps
+  translatedProps?: IButtonProps
 }
-export const LangSelector: React.FC<LangSelectorProps> = function ({ value, disableUnlessTranslated, groupProps }) {
+export const LangSelector: React.FC<LangSelectorProps> =
+function ({ exclude, value, untranslatedProps, translatedProps, groupProps }) {
   const cfg = useContext(LangConfigContext);
 
   return (
     <ButtonGroup {...groupProps}>
-      {Object.keys(cfg.available).map((langId: string) =>
+      {Object.keys(cfg.available).
+          filter(langID => (exclude || []).indexOf(langID) < 0).
+          map(langId =>
         <LangSelectorButton
           key={langId}
           id={langId}
           title={cfg.available[langId]}
           isSelected={langId === cfg.selected}
           onSelect={() => cfg.select(langId)}
-          disableUnlessTranslated={disableUnlessTranslated}
+          untranslatedProps={untranslatedProps}
+          translatedProps={translatedProps}
           hasTranslation={(value !== undefined) ? (value[langId] !== undefined) : undefined}
         />
       )}
@@ -55,14 +61,16 @@ interface LangSelectorButtonProps {
   isSelected: boolean
   onSelect: () => void
   hasTranslation?: boolean
-  disableUnlessTranslated?: boolean
+  untranslatedProps?: IButtonProps
+  translatedProps?: IButtonProps
 }
 const LangSelectorButton: React.FC<LangSelectorButtonProps> = function (props) {
   return (
     <Button
         active={props.isSelected}
-        disabled={props.hasTranslation === false && props.disableUnlessTranslated === true}
-        onClick={props.onSelect}>
+        onClick={props.onSelect}
+        {...(!props.hasTranslation ? props.untranslatedProps : {})}
+        {...(props.hasTranslation ? props.translatedProps : {})}>
       {props.id}
     </Button>
   );
