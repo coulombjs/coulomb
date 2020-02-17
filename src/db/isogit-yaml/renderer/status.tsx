@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 
 import { Button, IconName, FormGroup, InputGroup, Intent, Popover, Position, ButtonGroup } from '@blueprintjs/core';
 
-import { openWindow } from '../../../api_legacy/renderer';
 import { callIPC, useIPCValue } from '../../../ipc/renderer';
 
 import { DatabaseStatusComponentProps } from '../../../config/renderer';
@@ -61,8 +60,8 @@ function ({ dbIPCPrefix, status, description }) {
           onRequestSync={async () => await callIPC(`${ipcPrefix}-git-trigger-sync`)}
           onDiscardUnstaged={async () => await callIPC(`${ipcPrefix}-git-discard-unstaged`)}
           onPromptPassword={() => openPasswordPrompt(true)}
-          onShowCommitWindow={() => openWindow('batch-commit')}
-          onShowSettingsWindow={() => openWindow('settings')}
+          onShowCommitWindow={() => callIPC('open-predefined-window', { id: 'batchCommit' })}
+          onShowSettingsWindow={() => callIPC('open-predefined-window', { id: 'settings' })}
         />
       </ButtonGroup>
     </Popover>
