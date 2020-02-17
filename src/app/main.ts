@@ -237,7 +237,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 
   listen<{ id: keyof typeof config.app.windows, params?: Omit<WindowOpenerParams, 'component'> }, {}>
   ('open-predefined-window', async ({ id, params }) => {
-    const paramsWithDefaults = { ...config.app.windows[id].openerParams, ...params || {}};
+    const paramsWithDefaults = { ...config.app.windows[id].openerParams, ...params || {}, component: id, config: config.app };
     openWindow(paramsWithDefaults);
     return {};
   });
