@@ -396,28 +396,30 @@ export class IsoGitWrapper {
             await this.pull();
           } catch (e) {
             log.error(e);
-            await this.setStatus({ isPulling: false });
+            await this.setStatus({ isPushing: false, isPulling: false });
             await this._handleGitError(e);
             return;
           }
-          await this.setStatus({ isPulling: false });
+          //await this.setStatus({ isPulling: false });
 
           // Run push AFTER pull. May result in false-positive non-fast-forward rejection
-          await this.setStatus({ isPushing: true });
+          //await this.setStatus({ isPushing: true });
           try {
             await this.push();
           } catch (e) {
             log.error(e);
-            await this.setStatus({ isPushing: false });
+            await this.setStatus({ isPulling: false, isPushing: false });
             await this._handleGitError(e);
             return;
           }
-          await this.setStatus({ isPushing: false });
+          //await this.setStatus({ isPushing: false });
 
           await this.setStatus({
             statusRelativeToLocal: 'updated',
             isMisconfigured: false,
             needsPassword: false,
+            isPushing: false,
+            isPulling: false,
           });
         }
       }
