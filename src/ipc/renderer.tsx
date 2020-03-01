@@ -95,6 +95,7 @@ export function useIPCValue<I extends object, O>
           } else {
             updateErrors(["Unknown error"]);
           }
+          updateValue(initialValue);
         } else {
           updateValue(data.result);
         }
