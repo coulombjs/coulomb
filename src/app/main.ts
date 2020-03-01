@@ -44,7 +44,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   /* Helper functions */
 
   function _openWindow(windowName: keyof typeof config.app.windows, extraComponentParams: string = '') {
-    log.verbose(`C/main: Opening window ${String(windowName)}`);
+    log.verbose("C/main: Opening window", windowName);
 
     const defaultParams = config.app.windows[windowName].openerParams;
 
