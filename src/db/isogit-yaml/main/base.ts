@@ -23,9 +23,6 @@ import { BackendDescription, BackendStatus } from '../base';
 import { IsoGitWrapper } from './isogit';
 
 
-const DEFAULT_SYNC_INTERVAL = 50000;
-
-
 interface FixedBackendOptions {
   /* Settings supplied by the developer */
 
@@ -33,10 +30,6 @@ interface FixedBackendOptions {
   corsProxyURL: string
   upstreamRepoURL: string
   fsWrapperClass: () => Promise<{ default: new (baseDir: string) => FilesystemWrapper<any> }>
-
-  syncInterval?: number
-  // How often to try to synchronize Git remote in background, in ms.
-  // Synchronization will be skipped if another one is already running.
 }
 interface ConfigurableBackendOptions {
   /* Settings that user can or must specify */
@@ -58,7 +51,6 @@ class Backend extends VersionedFilesystemBackend {
   /* Combines a filesystem storage with Git. */
 
   private git: IsoGitWrapper;
-  private gitSyncIntervalDelay: number;
   private gitSyncInterval: NodeJS.Timeout | null = null;
   private fs: FilesystemWrapper<any>;
   private managers: (FilesystemManager & ModelManager<any, any, any>)[];
@@ -88,7 +80,6 @@ class Backend extends VersionedFilesystemBackend {
 
     this.managers = [];
 
-    this.gitSyncIntervalDelay = opts.syncInterval || DEFAULT_SYNC_INTERVAL;
     this.synchronize = this.synchronize.bind(this);
   }
 
