@@ -2,7 +2,7 @@ import React from 'react';
 import { useEffect, useState } from 'react';
 import { remote } from 'electron';
 
-import { Button, Label, Tabs, Tab, InputGroup } from '@blueprintjs/core';
+import { Button, Tabs, Tab, InputGroup, FormGroup } from '@blueprintjs/core';
 import { WindowComponentProps } from '../config/renderer';
 
 import { Pane, Setting } from '../settings/main';
@@ -115,7 +115,12 @@ const SettingInputList: React.FC<{ settings: Setting<any>[] }> = function ({ set
   return (
     <>
       {[...ipcSettings.entries()].map(([idx, s]: [number, SettingHook<any>]) =>
-        <SettingInput label={settings[idx].label} ipcSetting={s} key={idx} />)}
+        <SettingInput
+          label={settings[idx].label}
+          helpText={settings[idx].helpText}
+          ipcSetting={s}
+          key={idx}
+        />)}
       {hasChangedSettings
         ? <Button large intent="primary" onClick={commitAllAndClose}>Save all and close</Button>
         : null}
@@ -124,12 +129,16 @@ const SettingInputList: React.FC<{ settings: Setting<any>[] }> = function ({ set
 };
 
 
-const SettingInput: React.FC<{ label: string, ipcSetting: SettingHook<any> }> = function ({ label, ipcSetting }) {
+interface SettingsInputProps {
+  label: string
+  ipcSetting: SettingHook<any> 
+  helpText?: string
+}
+const SettingInput: React.FC<SettingsInputProps> = function ({ label, ipcSetting, helpText }) {
   return (
-    <Label>
-      {label}
-
+    <FormGroup label={label} labelFor="input" helperText={helpText}>
       <InputGroup
+        id="input"
         large
         type="text"
         value={ipcSetting.value}
@@ -147,7 +156,7 @@ const SettingInput: React.FC<{ label: string, ipcSetting: SettingHook<any> }> = 
           </Button>
         }
       />
-    </Label>
+    </FormGroup>
   );
 };
 

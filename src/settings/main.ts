@@ -34,6 +34,8 @@ export class Setting<T> {
     /* Setting label shown to the user should be unique within given pane,
        to avoid confusion. */
 
+    public helpText?: string,
+
   ) {}
 
   toUseable(val: unknown): T { return val as T }
