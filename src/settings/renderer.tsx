@@ -1,11 +1,14 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
+import { remote } from 'electron';
 
 import { Button, Label, Tabs, Tab, InputGroup } from '@blueprintjs/core';
 import { WindowComponentProps } from '../config/renderer';
 
 import { Pane, Setting } from '../settings/main';
 import { useIPCValue, callIPC } from '../ipc/renderer';
+
+import styles from './styles.scss';
 
 
 interface SettingHook<T> {
@@ -94,24 +97,27 @@ const SettingsScreen: React.FC<WindowComponentProps> = function ({ query }) {
     );
   }
 
-  return <div>{settingWidgetGroup}</div>;
+  return <div className={styles.base}>{settingWidgetGroup}</div>;
 };
 
 
 const SettingInputList: React.FC<{ settings: Setting<any>[] }> = function ({ settings }) {
   const ipcSettings = settings.map((setting) => useSetting<string>(setting.id, ''));
   const hasChangedSettings = ipcSettings.map((setting) => setting.changed()).indexOf(true) >= 0;
-  function commitAll() {
+
+  async function commitAllAndClose() {
     for (const setting of ipcSettings) {
-      setting.commit();
+      await setting.commit();
     }
+    remote.getCurrentWindow().close();
   }
+
   return (
     <>
       {[...ipcSettings.entries()].map(([idx, s]: [number, SettingHook<any>]) =>
         <SettingInput label={settings[idx].label} ipcSetting={s} key={idx} />)}
       {hasChangedSettings
-        ? <Button onClick={commitAll}>Save all</Button>
+        ? <Button large intent="primary" onClick={commitAllAndClose}>Save all and close</Button>
         : null}
     </>
   );
@@ -124,18 +130,23 @@ const SettingInput: React.FC<{ label: string, ipcSetting: SettingHook<any> }> = 
       {label}
 
       <InputGroup
-        value={ipcSetting.value}
+        large
         type="text"
-        rightElement={
-          <Button
-            disabled={!ipcSetting.changed}
-            onClick={ipcSetting.commit}
-            title="Save setting"
-            icon="tick" />
-        }
+        value={ipcSetting.value}
         onChange={(evt: React.FormEvent<HTMLElement>) => {
           ipcSetting.set((evt.target as HTMLInputElement).value as string);
-        }} />
+        }}
+        rightElement={
+          <Button
+              disabled={!ipcSetting.changed()}
+              onClick={ipcSetting.commit}
+              tabIndex={-1}
+              title="Save setting"
+              icon="tick">
+            Save
+          </Button>
+        }
+      />
     </Label>
   );
 };
