@@ -114,6 +114,7 @@ class Backend extends VersionedFilesystemBackend {
       'text',
       initialOptions.repoURL === undefined,
       "Git repository URL",
+      "E.g., https://github.com/<username>/<repository name>",
     ));
 
     settings.register(new Setting<string>(
