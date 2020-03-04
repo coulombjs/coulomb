@@ -99,20 +99,20 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
 
   } else if (status.isOnline !== true) {
     statusIcon = "offline";
-    tooltipText = "Offline"
-    statusIntent = "danger";
+    tooltipText = "Sync now"
+    statusIntent = "primary";
     action = status.needsPassword ? onPromptPassword : onRequestSync;
 
   } else if (status.needsPassword) {
     statusIcon = "lock";
-    tooltipText = "Provide password";
+    tooltipText = "Provide password & sync";
     statusIntent = "primary";
     action = onPromptPassword;
 
   } else if (status.hasLocalChanges) {
     statusIcon = "git-commit";
-    tooltipText = "Commit outstanding";
-    statusIntent = "warning";
+    tooltipText = "Commit & sync";
+    statusIntent = "primary";
     action = async () => {
       if (status.hasLocalChanges && uncommittedFileCount < 1) {
         // NOTE: If hasLocalChanges says yes, but uncommitted file count says no, try to fix it.
@@ -125,32 +125,32 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
 
   } else if (status.isPulling) {
     statusIcon = "cloud-download"
-    tooltipText = "Synchronizing";
+    tooltipText = "Syncing…";
     statusIntent = "primary";
     action = null;
 
   } else if (status.isPushing) {
     statusIcon = "cloud-upload"
-    tooltipText = "Synchronizing";
+    tooltipText = "Syncing…";
     statusIntent = "primary";
     action = null;
 
   } else if (status.statusRelativeToLocal === 'diverged') {
     statusIcon = "git-branch"
-    tooltipText = "Diverging changes";
-    statusIntent = "danger";
+    tooltipText = "Resolve conflict and sync";
+    statusIntent = "warning";
     action = onRequestSync;
 
   } else if (status.statusRelativeToLocal === 'behind') {
     statusIcon = "cloud-upload"
-    tooltipText = "Online";
-    statusIntent = "warning";
+    tooltipText = "Sync now";
+    statusIntent = "primary";
     action = onRequestSync;
 
   } else {
     statusIcon = "updated"
-    tooltipText = "Online";
-    statusIntent = "success";
+    tooltipText = "Sync now";
+    statusIntent = "primary";
     action = onRequestSync;
   }
 
