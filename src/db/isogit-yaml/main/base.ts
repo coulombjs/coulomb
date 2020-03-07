@@ -51,7 +51,6 @@ class Backend extends VersionedFilesystemBackend {
   /* Combines a filesystem storage with Git. */
 
   private git: IsoGitWrapper;
-  private gitSyncInterval: NodeJS.Timeout | null = null;
   private fs: FilesystemWrapper<any>;
   private managers: (FilesystemManager & ModelManager<any, any, any>)[];
 
@@ -205,9 +204,9 @@ class Backend extends VersionedFilesystemBackend {
       await this.git.destroy();
     }
 
-    if (this.gitSyncInterval) {
-      clearInterval(this.gitSyncInterval);
-    }
+    //if (this.gitSyncInterval) {
+    //  clearInterval(this.gitSyncInterval);
+    //}
 
     //this.gitSyncInterval = setInterval(this.synchronize, this.gitSyncIntervalDelay);
 
