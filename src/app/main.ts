@@ -1,7 +1,6 @@
 // Jury-rig global.fetch to make Isomorphic Git work under Node
 import fetch from 'node-fetch';
 (global as any).fetch = fetch;
-import { debounce } from 'throttle-debounce';
 
 import { app, App } from 'electron';
 import * as log from 'electron-log';
@@ -292,17 +291,17 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 };
 
 
-const reportBackendStatusToAllWindows = debounce(300, async (dbName: string, payload: object) => {
+const reportBackendStatusToAllWindows = async (dbName: string, payload: object) => {
   return await notifyAllWindows(`db-${dbName}-status`, payload);
-});
+};
 
 
-const reportModifiedDataToAllWindows = debounce(400, async (modelName: string, changedIDs?: string[]) => {
+const reportModifiedDataToAllWindows = async (modelName: string, changedIDs?: string[]) => {
   // TODO: If too many update calls with one ID affect performance,
   // debounce this function, combining shorter ID lists and reporting more of them at once
-  log.debug("Reporting modified data", modelName, changedIDs)
+  log.debug("C/main: Reporting modified data", modelName, changedIDs);
   return await notifyAllWindows(`model-${modelName}-objects-changed`, { ids: changedIDs });
-});
+};
 
 
 export interface MainApp<A extends AppConfig, M extends MainConfig<A>> {
