@@ -300,7 +300,7 @@ const reportBackendStatusToAllWindows = debounce(300, async (dbName: string, pay
 const reportModifiedDataToAllWindows = debounce(400, async (modelName: string, changedIDs?: string[]) => {
   // TODO: If too many update calls with one ID affect performance,
   // debounce this function, combining shorter ID lists and reporting more of them at once
-  console.debug("Reporting modified data", modelName, changedIDs)
+  log.debug("Reporting modified data", modelName, changedIDs)
   return await notifyAllWindows(`model-${modelName}-objects-changed`, { ids: changedIDs });
 });
 
