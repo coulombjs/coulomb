@@ -8,9 +8,6 @@ import { useEffect, useState } from 'react';
 import { reviveJsonValue } from './utils';
 
 
-var cache: { [id: string]: any } = {};
-
-
 type IPCResponse<O> = {
   errors: string[]
   result: O | undefined
@@ -65,22 +62,11 @@ export function useIPCValue<I extends object, O>
 
     const doQuery = async () => {
       let resp: string;
-      //const cachedResp = cache[cacheKey];
 
-      //if (cachedResp !== undefined) {
-      //  resp = cachedResp;
-      //} else {
-        //(async () => {
-        //updateValue(initialValue);
-
-        resp = await ipcEndpointRequestLock.acquire(endpointName, async function () {
-          const payloadToSend = JSON.stringify(payload || {});
-          return await ipcRenderer.invoke(endpointName, payloadToSend);
-        });
-
-        //cache[cacheKey] = resp;
-        //})();
-      //}
+      resp = await ipcEndpointRequestLock.acquire(endpointName, async function () {
+        const payloadToSend = JSON.stringify(payload || {});
+        return await ipcRenderer.invoke(endpointName, payloadToSend);
+      });
 
       const data = JSON.parse(resp, reviveJsonValue);
 
