@@ -28,7 +28,7 @@ export function useIPCEvent<P extends object>
 
   useEffect(() => {
     function handleEvent(evt: Electron.Event, payload: P) {
-      log.debug("Handling IPC event", endpointName);
+      log.debug("C/ipc/useIPCEvent: Handling IPC event", endpointName);
       handler(payload);
     }
     ipcRenderer.on(endpointName, handleEvent);
