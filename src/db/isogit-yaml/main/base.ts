@@ -203,14 +203,6 @@ class Backend extends VersionedFilesystemBackend {
     if (doInitialize) {
       await this.git.destroy();
     }
-
-    //if (this.gitSyncInterval) {
-    //  clearInterval(this.gitSyncInterval);
-    //}
-
-    //this.gitSyncInterval = setInterval(this.synchronize, this.gitSyncIntervalDelay);
-
-    //await this.synchronize();
   }
 
   public async read(objID: string, metaFields?: string[]) {
