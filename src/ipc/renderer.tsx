@@ -46,29 +46,21 @@ export function useIPCValue<I extends object, O>
 
   const [value, updateValue] = useState(initialValue);
   const [errors, updateErrors] = useState([] as string[]);
-  const [isUpdating, setUpdating] = useState(false);
+  const [isUpdating, setUpdating] = useState(true);
 
   const [reqCounter, updateReqCounter] = useState(0);
   const payloadSnapshot = JSON.stringify(payload || {});
 
   useEffect(() => {
-    setUpdating(false);
-  }, [value]);
+    let cancelled = false;
 
-  useEffect(() => {
-    setUpdating(true);
+    async function doQuery() {
+      setUpdating(true);
 
-    //const cacheKey = `${endpointName}${reqCounter}${payloadSnapshot}`;
-
-    const doQuery = async () => {
-      let resp: string;
-
-      resp = await ipcEndpointRequestLock.acquire(endpointName, async function () {
-        const payloadToSend = JSON.stringify(payload || {});
-        return await ipcRenderer.invoke(endpointName, payloadToSend);
-      });
-
+      const resp = await ipcRenderer.invoke(endpointName, payloadSnapshot);
       const data = JSON.parse(resp, reviveJsonValue);
+
+      if (cancelled) { return; }
 
       if (data.errors !== undefined) {
         const resp = data as IPCResponse<O>;
@@ -81,15 +73,23 @@ export function useIPCValue<I extends object, O>
           }
           updateValue(initialValue);
         } else {
+          updateErrors([]);
           updateValue(data.result);
         }
       } else {
         updateValue(data as O);
       }
+
+      setUpdating(false);
     };
 
     doQuery();
-  }, [reqCounter, payloadSnapshot]);
+
+    return () => {
+      cancelled = true;
+    }
+
+  }, [endpointName, reqCounter, payloadSnapshot]);
 
   return {
     value: value,
