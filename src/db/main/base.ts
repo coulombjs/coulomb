@@ -169,6 +169,12 @@ export abstract class ModelManager<M extends Model, IDType extends AnyIDType, Q 
       await this.update(objectID, object, commit);
       return { success: true };
     });
+
+    listen<{ object: M, commit: boolean }, { success: true }>
+    (`${prefix}-create-one`, async ({ object, commit }) => {
+      await this.create(object, commit);
+      return { success: true };
+    });
   }
 }
 
