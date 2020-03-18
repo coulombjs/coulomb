@@ -129,8 +129,8 @@ export class IsoGitWrapper {
         ...this.auth,
       });
 
-      if (this.upstreamRepoUrl) {
-        log.debug("C/db/isogit: Initialize: Adding upstream remote", this.repoUrl);
+      if (this.upstreamRepoUrl !== undefined) {
+        log.debug("C/db/isogit: Initialize: Adding upstream remote", this.upstreamRepoUrl);
         await git.addRemote({
           dir: this.workDir,
           remote: UPSTREAM_REMOTE,
