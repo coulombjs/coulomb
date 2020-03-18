@@ -28,7 +28,7 @@ interface FixedBackendOptions {
 
   workDir: string
   corsProxyURL: string
-  upstreamRepoURL: string
+  upstreamRepoURL?: string
   fsWrapperClass: () => Promise<{ default: new (baseDir: string) => FilesystemWrapper<any> }>
 }
 interface ConfigurableBackendOptions {

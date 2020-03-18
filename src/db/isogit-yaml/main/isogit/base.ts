@@ -35,7 +35,7 @@ export class IsoGitWrapper {
   constructor(
       private fs: any,
       private repoUrl: string,
-      private upstreamRepoUrl: string,
+      private upstreamRepoUrl: string | undefined,
       username: string,
       private author: { name: string, email: string },
       public workDir: string,
@@ -86,10 +86,10 @@ export class IsoGitWrapper {
     return hasGitDirectory;
   }
 
-  public async isUsingRemoteURLs(remoteUrls: { origin: string, upstream: string }): Promise<boolean> {
+  public async isUsingRemoteURLs(remoteUrls: { origin: string, upstream?: string }): Promise<boolean> {
     const origin = (await this.getOriginUrl() || '').trim();
     const upstream = (await this.getUpstreamUrl() || '').trim();
-    return origin === remoteUrls.origin && upstream === remoteUrls.upstream;
+    return origin === remoteUrls.origin && (upstream === undefined || upstream === remoteUrls.upstream);
   }
 
   public needsPassword(): boolean {
@@ -129,12 +129,16 @@ export class IsoGitWrapper {
         ...this.auth,
       });
 
-      log.debug("C/db/isogit: Initialize: Adding upstream remote", this.repoUrl);
-      await git.addRemote({
-        dir: this.workDir,
-        remote: UPSTREAM_REMOTE,
-        url: this.upstreamRepoUrl,
-      });
+      if (this.upstreamRepoUrl) {
+        log.debug("C/db/isogit: Initialize: Adding upstream remote", this.repoUrl);
+        await git.addRemote({
+          dir: this.workDir,
+          remote: UPSTREAM_REMOTE,
+          url: this.upstreamRepoUrl,
+        });
+      } else {
+        log.warn("C/db/isogit: Initialize: No upstream remote specified");
+      }
 
     } catch (e) {
       log.error("C/db/isogit: Error during initialization")
