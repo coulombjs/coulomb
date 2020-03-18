@@ -174,17 +174,19 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       // Show loading indicator while components are being resolved
       ReactDOM.render(<Spinner />, appRoot);
 
+      const ctxProviderConfig = config.contextProviders || [];
+
       // Get props prescribed for each context provider component
-      var ctxProviderProps = config.contextProviders.map(item => item.getProps(config));
+      var ctxProviderProps = ctxProviderConfig.map(item => item.getProps(config));
 
       log.silly(
         `C/renderApp: Resolving components`,
-        componentImporter, config.contextProviders);
+        componentImporter, ctxProviderConfig);
 
       // Resolve (import) components in parallel, first UI and then context providers
       const promisedComponents: { default: React.FC<any> }[] = await Promise.all([
         componentImporter(),
-        ...config.contextProviders.map(async (ctxp) => await ctxp.cls()),
+        ...ctxProviderConfig.map(async (ctxp) => await ctxp.cls()),
       ]);
 
       log.silly(
