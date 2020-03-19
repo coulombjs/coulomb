@@ -1,0 +1,47 @@
+{
+  "name": "coulomb",
+  "version": "0.1.10",
+  "main": "index.js",
+  "types": "index.d.ts",
+
+  "peerDependencies": {
+    "@blueprintjs/core": "^3.20.0",
+    "@blueprintjs/icons": "^3.12.0",
+    "electron": "^8.0.1",
+    "electron-log": "^4.0.6",
+    "electron-webpack": "^2.7.4",
+    "electron-webpack-ts": "^3.2.0",
+    "react": "^16.11.0",
+    "react-dom": "^16.11.0",
+    "node-sass": "^4.12.0",
+    "sass-loader": "^8.0.2",
+    "typescript": "^3.7.2",
+    "webpack": "~4.41.5"
+  },
+  "devDependencies": {
+    "@blueprintjs/core": "^3.20.0",
+    "@blueprintjs/icons": "^3.12.0",
+    "@types/fs-extra": "^8.0.1",
+    "@types/js-yaml": "^3.12.1",
+    "@types/node": "^12.12.27",
+    "@types/react": "^16.9.11",
+    "@types/react-dom": "^16.9.3",
+    "@types/node-fetch": "^2.5.4",
+    "electron": "^8.0.1",
+    "electron-log": "^4.0.6",
+    "react": "^16.11.0",
+    "react-dom": "^16.11.0",
+    "semantic-release": "^15.13.28",
+    "typescript": "^3.7.2",
+    "webpack": "~4.41.5"
+  },
+  "dependencies": {
+    "@isomorphic-git/lightning-fs": "^3.3.3",
+    "node-fetch": "^2.6.0",
+    "fs-extra": "^8.1.0",
+    "immer": "^3.1.3",
+    "isomorphic-git": "^0.78.0",
+    "js-yaml": "3.13.1",
+    "moment": "^2.24.0"
+  }
+}
