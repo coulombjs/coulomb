@@ -84,7 +84,7 @@ const customTimestampType = new Type('tag:yaml.org,2002:timestamp', {
   construct: constructYamlTimestamp,
   instanceOf: Date,
   represent: (obj) => {
-    return moment(obj).format('YYYY-MM-DD');
+    return moment(obj).toISOString();
   },
 });
 
