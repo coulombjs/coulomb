@@ -55,6 +55,7 @@ type UseCountHook<C extends RendererConfig<any>> =
 interface UseOneHookResult<M extends Model> {
   object: M | null
   isUpdating: boolean
+  refresh: () => void
 }
 type UseOneHook<C extends RendererConfig<any>> =
 <M extends Model, IDType extends AnyIDType>
@@ -165,7 +166,11 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       }
     });
 
-    return { object: object.value.object, isUpdating: object.isUpdating };
+    return {
+      object: object.value.object,
+      isUpdating: object.isUpdating,
+      refresh: () => object.refresh(),
+    };
   }
 
   // Fetch top-level UI component class and render it.
