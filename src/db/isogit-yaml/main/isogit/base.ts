@@ -89,7 +89,7 @@ export class IsoGitWrapper {
   public async isUsingRemoteURLs(remoteUrls: { origin: string, upstream?: string }): Promise<boolean> {
     const origin = (await this.getOriginUrl() || '').trim();
     const upstream = (await this.getUpstreamUrl() || '').trim();
-    return origin === remoteUrls.origin && (upstream === undefined || upstream === remoteUrls.upstream);
+    return origin === remoteUrls.origin && (remoteUrls.upstream === undefined || upstream === remoteUrls.upstream);
   }
 
   public needsPassword(): boolean {
