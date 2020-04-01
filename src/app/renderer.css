@@ -18,6 +18,14 @@ html.platform--win32::before {
   background-color: silver;
 }
 
+.bp3-tree-node-caret {
+  cursor: default !important;
+}
+
+.bp3-html-select select {
+  cursor: default !important;
+}
+
 .bp3-button {
   cursor: default !important;
 
