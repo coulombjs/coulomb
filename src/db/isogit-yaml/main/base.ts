@@ -88,6 +88,7 @@ class Backend extends VersionedFilesystemBackend {
       verboseNameLong: "Git-versioned YAML file tree",
       gitRepo: this.opts.repoURL,
       gitUsername: this.opts.username,
+      localClonePath: this.opts.workDir,
       status: this.git.getStatus(),
     }
   }

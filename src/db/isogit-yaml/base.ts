@@ -17,4 +17,5 @@ export type BackendStatus = GitStatus
 export interface BackendDescription extends BaseBackendDescription<BackendStatus> {
   gitRepo?: string
   gitUsername?: string
+  localClonePath?: string
 }
