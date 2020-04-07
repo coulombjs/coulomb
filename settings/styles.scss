@@ -1,0 +1,19 @@
+@import "~@blueprintjs/core/lib/scss/variables";
+
+html, body, #app {
+  height: 100vh;
+  width: 100vw;
+}
+
+#app {
+  cursor: default;
+  overflow: hidden;
+  display: flex;
+  flex-flow: column nowrap;
+  background: $pt-app-background-color;
+}
+
+:local .base {
+  padding: 2rem;
+  flex: 1;
+}
