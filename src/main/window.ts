@@ -150,9 +150,15 @@ async function createWindowForLocalComponent(
     })}?${params}`;
   }
 
-  const window = await createWindow(title, url, winParams, showWhileLoading, forceDebug);
+  const window = await createWindow(title, url, winParams, showWhileLoading, forceDebug || isDevelopment);
 
-  if (forceDebug) {
+  if (forceDebug || isDevelopment) {
+    window.webContents.on('devtools-opened', () => {
+      window.focus();
+      setImmediate(() => {
+        window.focus()
+      });
+    });
     window.webContents.openDevTools();
   }
 
@@ -165,10 +171,10 @@ async function createWindow(
     url: string,
     winParams: any,
     showWhileLoading: boolean,
-    ignoreCache: boolean = false): Promise<BrowserWindow> {
+    debug: boolean = false): Promise<BrowserWindow> {
 
   const window = new BrowserWindow({
-    webPreferences: {nodeIntegration: true},
+    webPreferences: { nodeIntegration: true, webSecurity: !debug },
     title: title,
     show: showWhileLoading === true,
     ...winParams
@@ -183,18 +189,11 @@ async function createWindow(
     });
   });
 
-  if (ignoreCache) {
+  if (debug) {
     window.loadURL(url, {'extraHeaders': 'pragma: no-cache\n'});
   } else {
     window.loadURL(url);
   }
-
-  window.webContents.on('devtools-opened', () => {
-    window.focus();
-    setImmediate(() => {
-      window.focus()
-    });
-  });
 
   return promise;
 }
