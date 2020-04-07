@@ -45,6 +45,15 @@ export abstract class Backend<IDType = AnyIDType> {
     (`${prefix}-describe`, async () => {
       return await this.describe();
     });
+
+    listen<{ objectID: IDType | null }, { object: object | null }>
+    (`${prefix}-read`, async ({ objectID }) => {
+      if (objectID === null) {
+        return { object: null };
+      } else {
+        return { object: await this.read(objectID) };
+      }
+    });
   }
 }
 
