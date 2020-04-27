@@ -14,7 +14,7 @@ import '!style-loader!css-loader!@blueprintjs/datetime/lib/css/blueprint-datetim
 import '!style-loader!css-loader!@blueprintjs/core/lib/css/blueprint.css';
 import '!style-loader!css-loader!./normalize.css';
 import '!style-loader!css-loader!./renderer.css';
-import { useIPCEvent, useIPCValue } from '../ipc/renderer';
+import { useIPCEvent, useIPCValue, callIPC } from '../ipc/renderer';
 
 
 interface AppRenderer<C extends RendererConfig<any>> {
@@ -23,6 +23,12 @@ interface AppRenderer<C extends RendererConfig<any>> {
   useIDs: UseIDsHook<C>
   useMany: UseManyHook<C>
   useOne: UseOneHook<C>
+
+  openPredefinedWindow:
+    (windowID: keyof C["app"]["windows"], params?: object) => Promise<void>
+
+  openObjectEditor:
+    (objectTypeID: keyof C["app"]["data"], objectID: any, params?: string) => Promise<void>
 }
 
 
@@ -81,6 +87,28 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
   const componentImporter = componentId ? config.windowComponents[componentId] : null;
 
   log.debug(`Requested window component ${componentId}`);
+
+
+  const openObjectEditor = async (dataTypeID: keyof C["app"]["data"], objectID: any, params?: string) => {
+    if (config.objectEditorWindows === undefined) {
+      throw new Error("No object editor windows configured");
+    }
+    const windowID = config.objectEditorWindows[dataTypeID];
+    if (windowID === undefined) {
+      throw new Error("Object editor window not configured");
+    }
+    await callIPC('open-predefined-window', {
+      id: windowID,
+      params: { componentParams: `objectID=${objectID}&${params || ''}` },
+    });
+  };
+
+  const openPredefinedWindow = async (windowID: keyof typeof config["app"]["windows"], params?: object) => {
+    await callIPC('open-predefined-window', {
+      id: windowID,
+      params: params || {},
+    });
+  };
 
 
   // TODO: Refactor out hook initialization
@@ -241,6 +269,8 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       useIDs,
       useMany,
       useOne,
+      openPredefinedWindow,
+      openObjectEditor,
     };
 
   } else {
