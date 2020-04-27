@@ -124,6 +124,9 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
       this.managerConfig.idField as string,
       query?.onlyIDs !== undefined
         ? query.onlyIDs.map(id => this.getDBRef(id))
+        : undefined,
+      this.managerConfig.metaFields
+        ? (this.managerConfig.metaFields as string[])
         : undefined);
     return idx;
   }
@@ -134,7 +137,13 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
       throw new Error("Updating object IDs is not supported at the moment.");
     }
 
-    await this.db.update(this.getDBRef(objID), newData, this.managerConfig.idField as string);
+    await this.db.update(
+      this.getDBRef(objID),
+      newData,
+      this.managerConfig.idField as string,
+      this.managerConfig.metaFields
+        ? (this.managerConfig.metaFields as string[])
+        : undefined);
 
     if (commit !== false) {
       await this.commitOne(

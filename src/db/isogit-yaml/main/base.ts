@@ -270,12 +270,12 @@ class Backend extends VersionedFilesystemBackend {
     return await this.fs.listIDs({ subdir: query.subdir });
   }
 
-  public async getIndex(subdir: string, idField: string, onlyIDs?: string[]) {
+  public async getIndex(subdir: string, idField: string, onlyIDs?: string[], metaFields?: string[]) {
     const idsToSelect = onlyIDs !== undefined
       ? onlyIDs.map(id => this.getRef(id))
       : undefined;
 
-    const objs = await this.fs.readAll({ subdir, onlyIDs: idsToSelect });
+    const objs = await this.fs.readAll({ subdir, onlyIDs: idsToSelect }, metaFields);
 
     var idx: Index<any> = {};
     for (const obj of objs) {
@@ -285,8 +285,8 @@ class Backend extends VersionedFilesystemBackend {
     return idx;
   }
 
-  public async update(objID: string, newData: Record<string, any>, idField: string) {
-    await this.fs.write(this.getRef(objID), newData);
+  public async update(objID: string, newData: Record<string, any>, idField: string, metaFields?: string[]) {
+    await this.fs.write(this.getRef(objID), newData, metaFields);
   }
 
   public async delete(objID: string) {
