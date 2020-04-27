@@ -258,9 +258,6 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     }));
   }
 
-  // Open main window
-  await _openWindow('default');
-
   // DB backend initialization happens after the app is ready,
   // since it may require user input (and hence GUI interaction)
   // of sensitive data not suitable for settings,
@@ -278,6 +275,9 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     log.debug("C/initMain: Initializing manager", managerID);
     await manager.init();
   }
+
+  // Open main window
+  await _openWindow('default');
 
   if (splashWindow) {
     _closeWindow(config.app.splashWindowID);
