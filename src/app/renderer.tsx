@@ -41,8 +41,8 @@ interface UseIDsHookResult<IDType extends AnyIDType> {
   isUpdating: boolean
 }
 type UseIDsHook<C extends RendererConfig<any>> =
-<IDType extends AnyIDType, Q extends object>
-(modelName: keyof C["app"]["data"], query: Q) => UseIDsHookResult<IDType>
+<IDType extends AnyIDType, Q extends object = {}>
+(modelName: keyof C["app"]["data"], query?: Q) => UseIDsHookResult<IDType>
 
 interface UseCountHookResult {
   count: number
@@ -86,7 +86,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
   // TODO: Refactor out hook initialization
 
   const useIDs: UseIDsHook<C> =
-  <IDType extends AnyIDType, Q extends object = any>
+  <IDType extends AnyIDType, Q extends object = {}>
   (modelName: keyof A["data"], query?: Q) => {
     /* Queries data for specified model, listens for update events and updates the dataset. */
 
