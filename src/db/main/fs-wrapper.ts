@@ -98,7 +98,7 @@ export abstract class AbstractLockingFilesystemWrapper<T> implements FilesystemW
     const potentialIDs = (await fs.readdir(dir));
     var ids: string[] = [];
     for (const maybeID of potentialIDs) {
-      if (await this.isValidID(maybeID)) {
+      if (await this.isValidID(query.subdir ? path.join(query.subdir, maybeID) : maybeID)) {
         ids.push(maybeID);
       }
     }
