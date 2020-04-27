@@ -8,6 +8,9 @@ export interface RendererConfig<App extends AppConfig> {
   windowComponents: Record<
     keyof App["windows"],
     () => Promise<{ default: React.FC<WindowComponentProps> }>>
+  objectEditorWindows?: Record<
+    keyof App["data"],
+    keyof App["windows"]>
   contextProviders?: ContextProviderConfig<any>[]
   databaseStatusComponents: Record<
     keyof App["databases"],
