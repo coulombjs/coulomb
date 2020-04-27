@@ -233,9 +233,13 @@ class Backend extends VersionedFilesystemBackend {
   public async commit(objIDs: string[], message: string) {
     await this.resetOrphanedFileChanges();
 
-    const paths: string[] = (await this.readUncommittedFileInfo()).
+    const uncommitted = await this.readUncommittedFileInfo();
+
+    const paths: string[] = uncommitted.
       filter(fileinfo => gitPathMatches(objIDs, fileinfo.path)).
       map(fileinfo => fileinfo.path);
+
+    log.debug("C/db: Committing objects", objIDs, uncommitted, paths, message);
 
     if (paths.length > 0) {
       // TODO: Make Git track which files got committed (had changes),
@@ -406,5 +410,10 @@ function gitPathMatches(objIDs: string[], gitPath: string) {
   // Git, however, doesn’t know about the extensions.
   // For YAML files with extensions (not directories),
   // try comparing with extensions removed.
-  return objIDs.indexOf(path.join(parsed.dir, parsed.name)) >= 0;
+
+  // Attempt to compare with directory of the file, for YAML directory
+  // backend.
+  return objIDs.find(id =>
+    id === parsed.dir || id === path.join(parsed.dir, parsed.name)
+  ) !== undefined;
 }
