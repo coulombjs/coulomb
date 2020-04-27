@@ -274,6 +274,11 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     await backend.init();
   }
 
+  for (const [managerID, manager] of Object.entries(managers)) {
+    log.debug("C/initMain: Initializing manager", managerID);
+    await manager.init();
+  }
+
   if (splashWindow) {
     _closeWindow(config.app.splashWindowID);
   }

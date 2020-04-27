@@ -150,6 +150,8 @@ export abstract class ModelManager<M extends Model, IDType extends AnyIDType, Q 
   protected abstract getDBRef(objID: IDType | string): string
   protected abstract getObjID(dbRef: string): IDType
 
+  async init() {}
+
   setUpIPC(modelName: string) {
     /* Initializes IPC endpoints to query or update data objects. */
 
