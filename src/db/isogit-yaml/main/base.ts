@@ -29,7 +29,7 @@ interface FixedBackendOptions {
   workDir: string
   corsProxyURL: string
   upstreamRepoURL?: string
-  fsWrapperClass: () => Promise<{ default: new (baseDir: string) => FilesystemWrapper<any> }>
+  fsWrapperClass: new (baseDir: string) => FilesystemWrapper<any>
 }
 interface ConfigurableBackendOptions {
   /* Settings that user can or must specify */
@@ -153,7 +153,7 @@ class Backend extends VersionedFilesystemBackend {
       return await settings.getValue(`${settingIDPrefix}${settingID}`) as T;
     }
 
-    const fsWrapperClass = (await availableOptions.fsWrapperClass()).default;
+    const fsWrapperClass = availableOptions.fsWrapperClass;
 
     return {
       workDir: availableOptions.workDir,
