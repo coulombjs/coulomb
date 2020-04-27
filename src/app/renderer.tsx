@@ -33,8 +33,8 @@ interface UseManyHookResult<M extends Model> {
   isUpdating: boolean
 }
 type UseManyHook<C extends RendererConfig<any>> =
-<M extends Model, Q extends object>
-(modelName: keyof C["app"]["data"], query: Q) => UseManyHookResult<M>
+<M extends Model, Q extends object = {}>
+(modelName: keyof C["app"]["data"], query?: Q) => UseManyHookResult<M>
 
 interface UseIDsHookResult<IDType extends AnyIDType> {
   ids: IDType[]
@@ -125,7 +125,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
   }
 
   const useMany: UseManyHook<C> =
-  <M extends Model, Q extends object = any>
+  <M extends Model, Q extends object = {}>
   (modelName: keyof A["data"], query?: Q) => {
     /* Queries data for specified model, listens for update events and updates the dataset. */
 
