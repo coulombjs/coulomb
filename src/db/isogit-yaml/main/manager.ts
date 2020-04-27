@@ -23,6 +23,7 @@ export interface ManagerOptions<M extends Model> extends BaseManagerOptions<M> {
   workDir: string
 
   // List of fields that go into meta.yaml
+  // TODO: Ties the manager to DB’s YAMLDirectoryWrapper
   metaFields?: (keyof M)[]
 
   // Name of model field containing unqiue identifier equivalent

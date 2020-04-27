@@ -161,7 +161,10 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
     (`model-${modelName}-read-all`, {}, query);
 
     useIPCEvent<{ ids?: string[] }>(`model-${modelName}-objects-changed`, function ({ ids }) {
+      // TODO: generic query refresh IPC event/hook?
+
       objects.refresh();
+
       // TODO: Only refresh when needed.
       // Below code works, except it won’t trigger refresh
       // when new objects are added:
