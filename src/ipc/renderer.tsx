@@ -8,11 +8,18 @@ import { useEffect, useState } from 'react';
 import { reviveJsonValue } from './utils';
 
 
-type IPCResponse<O> = {
+interface IPCHook<T> {
+  value: T
+  errors: string[]
+  isUpdating: boolean
+  refresh: () => void
+  _reqCounter: number
+}
+
+interface IPCResponse<O> {
   errors: string[]
   result: O | undefined
 };
-
 
 class IPCFailure extends Error {
   constructor(public errorMessageList: string[]) {
@@ -20,6 +27,9 @@ class IPCFailure extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+
+const ipcEndpointRequestLock = new AsyncLock({ maxPending: 1000 });
 
 
 export function useIPCEvent<P extends object>
@@ -137,15 +147,3 @@ export async function relayIPCEvent
 (payload: I): Promise<O> {
   return await callIPC<I, O>('relay-event-to-all-windows', payload);
 }
-
-
-interface IPCHook<T> {
-  value: T
-  errors: string[]
-  isUpdating: boolean
-  refresh: () => void
-  _reqCounter: number
-}
-
-
-const ipcEndpointRequestLock = new AsyncLock({ maxPending: 100000 });
