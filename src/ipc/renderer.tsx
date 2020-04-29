@@ -36,11 +36,12 @@ export function useIPCEvent<P extends object>
 (endpointName: string, handler: (payload: P) => void) {
   /* Sets up main -> renderer event listener & cleanup on component destruction. */
 
+  function handleEvent(evt: Electron.Event, payload: P) {
+    log.silly("C/ipc/useIPCEvent: Handling IPC event", endpointName);
+    handler(payload);
+  }
+
   useEffect(() => {
-    function handleEvent(evt: Electron.Event, payload: P) {
-      log.debug("C/ipc/useIPCEvent: Handling IPC event", endpointName);
-      handler(payload);
-    }
     ipcRenderer.on(endpointName, handleEvent);
     return function cleanup() {
       ipcRenderer.removeListener(endpointName, handleEvent);
