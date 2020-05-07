@@ -9,8 +9,7 @@ export const Schema = new yaml.Schema({
   // Trick because js-yaml API appears to not support augmenting implicit tags
   implicit: [
     ...(yaml.DEFAULT_SAFE_SCHEMA as any).implicit,
-    ...[customTimestampType],
-    ...[customBoolType],
+    ...[customTimestampType, customBoolType],
   ],
 });
 /* This schema simply adds timestamp parsing to YAML. */

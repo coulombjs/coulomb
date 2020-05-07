@@ -6,14 +6,19 @@ function resolveYamlBoolean(data) {
 
   var max = data.length;
 
-  return (max === 3 && (data === 'yes' || data === 'Yes' || data === 'YES')) ||
+  return (max === 4 && (data === 'true' || data === 'True' || data === 'TRUE')) ||
+         (max === 5 && (data === 'false' || data === 'False' || data === 'FALSE')) ||
+         (max === 3 && (data === 'yes' || data === 'Yes' || data === 'YES')) ||
          (max === 2 && (data === 'no' || data === 'No' || data === 'NO'));
 }
 
 function constructYamlBoolean(data) {
   return data === 'yes' ||
          data === 'Yes' ||
-         data === 'YES';
+         data === 'YES' ||
+         data === 'true' ||
+         data === 'True' ||
+         data === 'TRUE';
 }
 
 function isBoolean(object) {
