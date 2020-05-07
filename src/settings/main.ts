@@ -120,8 +120,10 @@ export class SettingManager {
 
   private async commit() {
     log.info("C/settings: Commit new settings");
+
     log.debug("C/settings: Commit: Remove file");
     await fs.remove(this.settingsPath);
+
     log.debug("C/settings: Commit: Write new file");
     await this.yaml.write(this.settingsFileName, this.data);
   }
