@@ -94,12 +94,16 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       throw new Error("No object editor windows configured");
     }
     const windowID = config.objectEditorWindows[dataTypeID];
+    const windowOptions = config.app.windows[windowID as keyof typeof config.app.windows];
     if (windowID === undefined) {
       throw new Error("Object editor window not configured");
     }
     await callIPC('open-predefined-window', {
       id: windowID,
-      params: { componentParams: `objectID=${objectID}&${params || ''}` },
+      params: {
+        componentParams: `objectID=${objectID}&${params || ''}`,
+        title: `${windowOptions.openerParams.title} (${objectID})`,
+      },
     });
   };
 
