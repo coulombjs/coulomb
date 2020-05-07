@@ -21,7 +21,17 @@ import { makeWindowEndpoint } from '../ipc/main';
 import { openWindow, closeWindow } from '../main/window';
 
 
-export let main: MainApp<any, any>;
+export interface MainApp<A extends AppConfig, M extends MainConfig<A>> {
+  /* Object returned by initMain. */
+
+  app: App
+  isMacOS: boolean
+  isDevelopment: boolean
+  managers: Record<keyof A["data"], ModelManager<any, any>>
+  databases: Record<keyof M["databases"], Backend>
+  openWindow: (windowName: keyof A["windows"]) => void
+  settings: SettingManager
+}
 
 
 export const initMain = async <C extends MainConfig<any>>(config: C): Promise<MainApp<any, C>> => {
@@ -283,16 +293,17 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     _closeWindow(config.app.splashWindowID);
   }
 
-  main = {
+  const initializedMain: MainApp<typeof config.app, typeof config> = {
     app,
     isMacOS,
     isDevelopment,
     managers,
     databases,
+    settings,
     openWindow: _openWindow,
-  } as MainApp<any, any>;
+  };
 
-  return main as MainApp<typeof config.app, typeof config>;
+  return initializedMain;
 };
 
 
@@ -307,15 +318,3 @@ const reportModifiedDataToAllWindows = async (modelName: string, changedIDs?: st
   log.debug("C/main: Reporting modified data", modelName, changedIDs);
   return await notifyAllWindows(`model-${modelName}-objects-changed`, { ids: changedIDs });
 };
-
-
-export interface MainApp<A extends AppConfig, M extends MainConfig<A>> {
-  /* Object returned by initMain. */
-
-  app: App
-  isMacOS: boolean
-  isDevelopment: boolean
-  managers: Record<keyof A["data"], ModelManager<any, any>>
-  databases: Record<keyof M["databases"], Backend>
-  openWindow: (windowName: keyof A["windows"]) => void
-}
