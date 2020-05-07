@@ -40,7 +40,7 @@ class Manager<M extends Model, IDType extends AnyIDType, Q extends BasicQuery<ID
 extends ModelManager<M, IDType, Q> implements FilesystemManager {
 
   constructor(
-      private db: Backend,
+      protected db: Backend,
       private managerConfig: ManagerOptions<M>,
       private modelInfo: ModelInfo,
       public reportUpdatedData: ManagedDataChangeReporter<IDType>) {
