@@ -1,5 +1,6 @@
 import * as yaml from 'js-yaml';
 import { customTimestampType } from './yaml-custom-ts';
+import { customBoolType } from './yaml-custom-bool';
 
 
 export const Schema = new yaml.Schema({
@@ -9,6 +10,7 @@ export const Schema = new yaml.Schema({
   implicit: [
     ...(yaml.DEFAULT_SAFE_SCHEMA as any).implicit,
     ...[customTimestampType],
+    ...[customBoolType],
   ],
 });
 /* This schema simply adds timestamp parsing to YAML. */
