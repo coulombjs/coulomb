@@ -1,0 +1,14 @@
+import * as yaml from 'js-yaml';
+import { customTimestampType } from './yaml-custom-ts';
+import { customBoolType } from './yaml-custom-bool';
+export const Schema = new yaml.Schema({
+    include: [yaml.DEFAULT_SAFE_SCHEMA],
+    // Trick because js-yaml API appears to not support augmenting implicit tags
+    implicit: [
+        ...yaml.DEFAULT_SAFE_SCHEMA.implicit,
+        ...[customTimestampType],
+        ...[customBoolType],
+    ],
+});
+/* This schema simply adds timestamp parsing to YAML. */
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoic2NoZW1hLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vLi4vLi4vLi4vc3JjL2RiL2lzb2dpdC15YW1sL21haW4veWFtbC9zY2hlbWEudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsT0FBTyxLQUFLLElBQUksTUFBTSxTQUFTLENBQUM7QUFDaEMsT0FBTyxFQUFFLG1CQUFtQixFQUFFLE1BQU0sa0JBQWtCLENBQUM7QUFDdkQsT0FBTyxFQUFFLGNBQWMsRUFBRSxNQUFNLG9CQUFvQixDQUFDO0FBR3BELE1BQU0sQ0FBQyxNQUFNLE1BQU0sR0FBRyxJQUFJLElBQUksQ0FBQyxNQUFNLENBQUM7SUFDcEMsT0FBTyxFQUFFLENBQUMsSUFBSSxDQUFDLG1CQUFtQixDQUFDO0lBRW5DLDRFQUE0RTtJQUM1RSxRQUFRLEVBQUU7UUFDUixHQUFJLElBQUksQ0FBQyxtQkFBMkIsQ0FBQyxRQUFRO1FBQzdDLEdBQUcsQ0FBQyxtQkFBbUIsQ0FBQztRQUN4QixHQUFHLENBQUMsY0FBYyxDQUFDO0tBQ3BCO0NBQ0YsQ0FBQyxDQUFDO0FBQ0gsd0RBQXdEIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0ICogYXMgeWFtbCBmcm9tICdqcy15YW1sJztcbmltcG9ydCB7IGN1c3RvbVRpbWVzdGFtcFR5cGUgfSBmcm9tICcuL3lhbWwtY3VzdG9tLXRzJztcbmltcG9ydCB7IGN1c3RvbUJvb2xUeXBlIH0gZnJvbSAnLi95YW1sLWN1c3RvbS1ib29sJztcblxuXG5leHBvcnQgY29uc3QgU2NoZW1hID0gbmV3IHlhbWwuU2NoZW1hKHtcbiAgaW5jbHVkZTogW3lhbWwuREVGQVVMVF9TQUZFX1NDSEVNQV0sXG5cbiAgLy8gVHJpY2sgYmVjYXVzZSBqcy15YW1sIEFQSSBhcHBlYXJzIHRvIG5vdCBzdXBwb3J0IGF1Z21lbnRpbmcgaW1wbGljaXQgdGFnc1xuICBpbXBsaWNpdDogW1xuICAgIC4uLih5YW1sLkRFRkFVTFRfU0FGRV9TQ0hFTUEgYXMgYW55KS5pbXBsaWNpdCxcbiAgICAuLi5bY3VzdG9tVGltZXN0YW1wVHlwZV0sXG4gICAgLi4uW2N1c3RvbUJvb2xUeXBlXSxcbiAgXSxcbn0pO1xuLyogVGhpcyBzY2hlbWEgc2ltcGx5IGFkZHMgdGltZXN0YW1wIHBhcnNpbmcgdG8gWUFNTC4gKi9cbiJdfQ==
