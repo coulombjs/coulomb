@@ -115,7 +115,8 @@ class YAMLDirectoryWrapper extends YAMLWrapper<YAML> {
 
     } else {
       // Writing ``undefined`` should cause FS wrapper to delete the file from filesystem
-      return super.write(objID, newData);
+      await fs.remove(objPath);
+      return [objPath];
     }
   }
 }
