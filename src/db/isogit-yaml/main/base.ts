@@ -289,7 +289,7 @@ class Backend extends VersionedFilesystemBackend {
     return idx;
   }
 
-  public async update(objID: string, newData: Record<string, any>, idField: string, metaFields?: string[]) {
+  public async update(objID: string, newData: Record<string, any>, metaFields?: string[]) {
     await this.fs.write(this.getRef(objID), newData, metaFields);
   }
 

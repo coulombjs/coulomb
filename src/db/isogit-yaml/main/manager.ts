@@ -141,7 +141,6 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
     await this.db.update(
       this.getDBRef(objID),
       newData,
-      this.managerConfig.idField as string,
       this.managerConfig.metaFields
         ? (this.managerConfig.metaFields as string[])
         : undefined);
