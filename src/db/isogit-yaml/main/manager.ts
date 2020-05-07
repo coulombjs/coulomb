@@ -73,7 +73,8 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
       await this.commitOne(
         objID,
         commit !== true ? commit : null,
-        'create');
+        'create',
+        false);
       await this.reportUpdatedData([objID]);
     }
   }
@@ -150,6 +151,7 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
         objID,
         commit !== true ? commit : null,
         'update',
+        false,
         newData);
 
       await this.reportUpdatedData([objID]);
@@ -163,18 +165,20 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
       await this.commitOne(
         objID,
         commit !== true ? commit : null,
-        'delete');
+        'delete',
+        true);
       await this.reportUpdatedData([objID]);
     }
   }
 
-  private async commitOne(objID: IDType, commitMessage: string | null, verb: string, obj?: M) {
+  private async commitOne(objID: IDType, commitMessage: string | null, verb: string, removing = false, obj?: M) {
     try {
       await this.db.commit(
         [this.getDBRef(objID)],
         commitMessage !== null
           ? commitMessage
-          : this.formatCommitMessage(verb, objID, obj));
+          : this.formatCommitMessage(verb, objID, obj),
+        removing);
 
     } catch (e) {
       // TODO: This is the only thing that makes this manager Git-specific.

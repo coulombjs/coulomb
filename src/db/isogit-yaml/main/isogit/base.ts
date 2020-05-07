@@ -194,14 +194,21 @@ export class IsoGitWrapper {
     });
   }
 
-  async stage(pathSpecs: string[]) {
-    log.verbose(`C/db/isogit: Adding changes: ${pathSpecs.join(', ')}`);
+  async stage(pathSpecs: string[], removing = false) {
+    log.verbose(`C/db/isogit: Staging changes: ${pathSpecs.join(', ')} using ${removing ? "remove()" : "add()"}`);
 
     for (const pathSpec of pathSpecs) {
-      await git.add({
-        dir: this.workDir,
-        filepath: pathSpec,
-      });
+      if (removing !== true) {
+        await git.add({
+          dir: this.workDir,
+          filepath: pathSpec,
+        });
+      } else {
+        await git.remove({
+          dir: this.workDir,
+          filepath: pathSpec,
+        });
+      }
     }
   }
 
@@ -315,7 +322,7 @@ export class IsoGitWrapper {
       .filter(filepath => !filepath.startsWith('..'));
   }
 
-  public async stageAndCommit(pathSpecs: string[], msg: string): Promise<number> {
+  public async stageAndCommit(pathSpecs: string[], msg: string, removing = false): Promise<number> {
     /* Stages and commits files matching given path spec with given message.
 
        Any other files staged at the time of the call will be unstaged.
@@ -343,7 +350,7 @@ export class IsoGitWrapper {
       }
 
       await this.unstageAll();
-      await this.stage(pathSpecs);
+      await this.stage(pathSpecs, removing);
       await this.commit(msg);
 
       return filesChanged;

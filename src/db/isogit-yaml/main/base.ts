@@ -230,7 +230,7 @@ class Backend extends VersionedFilesystemBackend {
     await this.fs.write(objPath, obj, metaFields);
   }
 
-  public async commit(objIDs: string[], message: string) {
+  public async commit(objIDs: string[], message: string, removing = false) {
     await this.resetOrphanedFileChanges();
 
     const uncommitted = await this.readUncommittedFileInfo();
@@ -244,7 +244,7 @@ class Backend extends VersionedFilesystemBackend {
     if (paths.length > 0) {
       // TODO: Make Git track which files got committed (had changes),
       // and return paths
-      await this.git.stageAndCommit(paths, message);
+      await this.git.stageAndCommit(paths, message, removing);
     }
   }
 
@@ -332,6 +332,7 @@ class Backend extends VersionedFilesystemBackend {
     await this.git.synchronize();
 
     for (const mgr of this.managers) {
+      await mgr.init();
       mgr.reportUpdatedData();
     }
   }
