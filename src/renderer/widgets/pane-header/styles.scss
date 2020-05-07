@@ -1,7 +1,7 @@
 @import "~@blueprintjs/core/lib/scss/variables";
 
 :local .paneHeader {
-  $sidePadding: 20px;
+  $sidePadding: $pt-grid-size * 2;
 
   margin: 0;
   height: $pt-navbar-height;
