@@ -136,6 +136,7 @@ export class SettingManager {
       this.registry.push(setting);
 
     } else {
+      log.error("C/settings: Unable to register a setting: Invalid pane ID");
       throw new Error("Invalid pane ID");
     }
   }
