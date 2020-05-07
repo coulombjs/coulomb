@@ -12,6 +12,7 @@ export interface Pane {
   id: string;
   label: string;
   icon?: string;
+  helpText?: string;
 }
 
 
