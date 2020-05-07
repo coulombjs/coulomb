@@ -181,6 +181,12 @@ export abstract class ModelManager<M extends Model, IDType extends AnyIDType, Q 
       return { success: true };
     });
 
+    listen<{ objectID: IDType }, { success: true }>
+    (`${prefix}-delete-one`, async ({ objectID }) => {
+      await this.delete(objectID, true);
+      return { success: true };
+    });
+
     listen<{ object: M, commit: boolean }, { success: true }>
     (`${prefix}-create-one`, async ({ object, commit }) => {
       await this.create(object, commit);
