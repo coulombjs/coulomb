@@ -8,6 +8,9 @@ import { useEffect, useState } from 'react';
 import { reviveJsonValue } from './utils';
 
 
+ipcRenderer.setMaxListeners(50);
+
+
 interface IPCHook<T> {
   value: T
   errors: string[]
