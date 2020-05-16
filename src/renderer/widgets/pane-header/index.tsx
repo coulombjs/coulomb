@@ -3,7 +3,7 @@ import { Text } from '@blueprintjs/core';
 import styles from './styles.scss';
 
 
-interface PaneHeaderProps {
+export interface PaneHeaderProps {
   major?: boolean,
   minor?: boolean,
   align?: 'left' | 'right',
