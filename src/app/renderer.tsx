@@ -212,7 +212,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
   if (componentImporter) {
     (async () => {
       // Show loading indicator while components are being resolved
-      ReactDOM.render(<Spinner />, appRoot);
+      ReactDOM.render(<Spinner className="initial-spinner" />, appRoot);
 
       const ctxProviderConfig = config.contextProviders || [];
 
