@@ -1,14 +1,13 @@
-import React from 'react';
 import * as log from 'electron-log';
+import React from 'react';
 import * as ReactDOM from 'react-dom';
+
+import { NonIdealState, Spinner } from '@blueprintjs/core';
 
 import { AppConfig } from '../config/app';
 import { RendererConfig } from '../config/renderer';
-
 import { Model, AnyIDType } from '../db/models';
 import { Index } from '../db/query';
-
-import { NonIdealState, Spinner } from '@blueprintjs/core';
 
 import '!style-loader!css-loader!@blueprintjs/datetime/lib/css/blueprint-datetime.css';
 import '!style-loader!css-loader!@blueprintjs/core/lib/css/blueprint.css';
