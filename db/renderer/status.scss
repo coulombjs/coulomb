@@ -1,0 +1,14 @@
+:local .dbLabel {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  white-space: nowrap;
+}
+
+:local .backendType {
+  white-space: nowrap;
+}
+
+:local .backendDetails {
+  margin-top: .5rem;
+}
