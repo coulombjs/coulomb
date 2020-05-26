@@ -71,7 +71,7 @@ export const SimpleEditableCard: React.FC<SimpleEditableCardProps> = function (p
           ${props.onDelete ? styles.editableCardDeletable : ''}
           ${props.className || ''}
         `}
-        interactive={props.onClick ? true : false}
+        interactive={(props.onClick || props.onSelect) ? true : false}
         onClick={props.onClick || props.onSelect}>
 
       {props.icon
