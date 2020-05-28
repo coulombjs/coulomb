@@ -1,0 +1,124 @@
+@import "~@blueprintjs/core/lib/scss/variables";
+
+:local .addCardTriggerContainer {
+  .addCardTrigger {
+    position: absolute;
+    left: .75rem;
+    transform: scale(0.6) translateY(-80%);
+    z-index: 4;
+
+    border-radius: 100% !important;
+
+    &:hover {
+      transform: scale(0.8) translateY(-60%);
+    }
+  }
+
+  .addCardTriggerHighlighted {
+    font-size: 85%;
+    margin-left: .75rem;
+    position: static;
+    border-radius: $pt-border-radius !important;
+    transform: none;
+    transform-origin: left center;
+
+    &:hover {
+      transform: none;
+    }
+  }
+
+  // Hack to preserve external class name
+  :global .bp3-active {
+    transform: scale(1) !important;
+  }
+}
+
+:local .editableCard {
+  border-radius: 0 !important;
+  flex: 1;
+
+  height: $pt-navbar-height;
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+
+  position: relative;
+  padding: 0 20px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:local .cardContents {
+  flex: 1;
+}
+
+$minimalCardHeight: $pt-navbar-height / 1.75;
+
+:local .editableCardMinimal {
+  height: $minimalCardHeight;
+  padding: 0 20px !important;
+  background: none !important;
+  box-shadow: none !important;
+  font-size: $pt-font-size-small;
+}
+
+:local .editableCardInteractive {
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+:local .editableCardDeletable {
+  padding-right: $pt-navbar-height + 10px !important;
+
+  .editableCardDeleteButton {
+    height: $pt-navbar-height;
+    width: $pt-navbar-height;
+
+    position: absolute;
+    top: 0;
+    right: 0;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 .5em !important;
+
+    filter: grayscale(100%);
+    opacity: 0.4;
+
+    &:hover {
+      filter: none;
+      opacity: 1;
+    }
+  }
+
+  &.editableCardMinimal {
+    padding-right: 20px !important;
+
+    .editableCardDeleteButton {
+      display: none;
+      height: $minimalCardHeight;
+      width: $minimalCardHeight;
+    }
+
+    &:hover {
+      padding-right: ($minimalCardHeight) + 10px !important;
+
+      .editableCardDeleteButton {
+        display: inherit;
+        height: $minimalCardHeight;
+        width: $minimalCardHeight;
+      }
+    }
+  }
+}
+
+:local .editableCardExtended {
+  height: unset;
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+
+:local .editableCardSelected {
+  background: $light-gray2 !important;
+}
