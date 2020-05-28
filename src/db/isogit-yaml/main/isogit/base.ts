@@ -441,6 +441,8 @@ export class IsoGitWrapper {
             isPushing: false,
             isPulling: false,
           });
+        } else {
+          await this.setStatus({ hasLocalChanges: true });
         }
       }
     });
