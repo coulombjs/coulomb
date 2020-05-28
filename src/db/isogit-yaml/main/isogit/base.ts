@@ -407,7 +407,11 @@ export class IsoGitWrapper {
             await this.pull();
           } catch (e) {
             log.error(e);
-            await this.setStatus({ isPushing: false, isPulling: false });
+            await this.setStatus({
+              lastSynchronized: new Date(),
+              isPulling: false,
+              isPushing: false,
+,           });
             await this._handleGitError(e);
             return;
           }
@@ -419,7 +423,11 @@ export class IsoGitWrapper {
             await this.push();
           } catch (e) {
             log.error(e);
-            await this.setStatus({ isPulling: false, isPushing: false });
+            await this.setStatus({
+              lastSynchronized: new Date(),
+              isPulling: false,
+              isPushing: false,
+            });
             await this._handleGitError(e);
             return;
           }
@@ -428,6 +436,7 @@ export class IsoGitWrapper {
           await this.setStatus({
             statusRelativeToLocal: 'updated',
             isMisconfigured: false,
+            lastSynchronized: new Date(),
             needsPassword: false,
             isPushing: false,
             isPulling: false,

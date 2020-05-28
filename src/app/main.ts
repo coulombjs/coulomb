@@ -244,6 +244,14 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   .reduce((val, acc) => ({ ...acc, ...val }), {} as Partial<Managers>) as Managers;
 
 
+  listen<{}, { databases: (keyof MainApp<any, C>["databases"])[] }>
+  ('list-databases', async () => {
+    return {
+      databases: Object.keys(databases),
+    };
+  });
+
+
   listen<{ id: keyof typeof config.app.windows, params?: Omit<WindowOpenerParams, 'component'> }, {}>
   ('open-predefined-window', async ({ id, params }) => {
     const paramsWithDefaults = { ...config.app.windows[id].openerParams, ...params || {}, component: id, config: config.app };
@@ -268,6 +276,14 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     }));
   }
 
+
+  // Open main window
+  await _openWindow('default');
+
+  if (splashWindow) {
+    _closeWindow(config.app.splashWindowID);
+  }
+
   // DB backend initialization happens after the app is ready,
   // since it may require user input (and hence GUI interaction)
   // of sensitive data not suitable for settings,
@@ -284,13 +300,6 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   for (const [managerID, manager] of Object.entries(managers)) {
     log.debug("C/initMain: Initializing manager", managerID);
     await manager.init();
-  }
-
-  // Open main window
-  await _openWindow('default');
-
-  if (splashWindow) {
-    _closeWindow(config.app.splashWindowID);
   }
 
   const initializedMain: MainApp<typeof config.app, typeof config> = {
