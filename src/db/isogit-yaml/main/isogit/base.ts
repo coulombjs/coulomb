@@ -411,7 +411,7 @@ export class IsoGitWrapper {
               lastSynchronized: new Date(),
               isPulling: false,
               isPushing: false,
-,           });
+            });
             await this._handleGitError(e);
             return;
           }
