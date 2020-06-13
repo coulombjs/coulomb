@@ -211,6 +211,8 @@ export abstract class VersionedFilesystemBackend extends VersionedBackend<string
 
   abstract getIndex(idField: string, subdir: string, onlyIDs?: string[]): Promise<Index<any>>
 
+  abstract getLocalFilesystemPath(id: string): Promise<string>
+
   abstract registerManager(manager: FilesystemManager): void
   /* Enables instances of this backend to keep track of managers,
      which is required for the purpose of excluding files
@@ -231,6 +233,9 @@ export abstract class VersionedFilesystemBackend extends VersionedBackend<string
 
 
 export interface FilesystemManager {
+
+  getLocalFilesystemPath(id: AnyIDType): Promise<string>
+
   managesFileAtPath(filePath: string): boolean
   /* Determines whether the manager instance is responsible for the file
      under given path. */

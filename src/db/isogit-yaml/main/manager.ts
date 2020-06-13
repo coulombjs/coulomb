@@ -49,6 +49,10 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
     db.registerManager(this);
   }
 
+  public async getLocalFilesystemPath(id: IDType) {
+    return `${await this.db.getLocalFilesystemPath(this.getDBRef(id))}`;
+  }
+
   public managesFileAtPath(filePath: string) {
     return true;
   }
@@ -254,6 +258,11 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
     (`${prefix}-discard-all-uncommitted`, async ({ objectIDs }) => {
       await this.discard(objectIDs);
       return { success: true };
+    });
+
+    listen<{ objectID: IDType }, { path: string }>
+    (`${prefix}-get-filesystem-path`, async ({ objectID }) => {
+      return { path: await this.getLocalFilesystemPath(objectID) };
     });
   }
 }

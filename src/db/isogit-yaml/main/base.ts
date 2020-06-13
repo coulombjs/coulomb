@@ -82,6 +82,10 @@ class Backend extends VersionedFilesystemBackend {
     this.synchronize = this.synchronize.bind(this);
   }
 
+  public async getLocalFilesystemPath(id: string) {
+    return this.fs.expandPath(id);
+  }
+
   public async describe(): Promise<BackendDescription> {
     return {
       verboseName: "Git+YAML",
