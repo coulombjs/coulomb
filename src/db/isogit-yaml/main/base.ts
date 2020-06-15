@@ -86,6 +86,13 @@ class Backend extends VersionedFilesystemBackend {
     return this.fs.expandPath(id);
   }
 
+  public async getCurrentCommitterInformation(): Promise<{ name: string, email: string }> {
+    return {
+      name: this.opts.authorName,
+      email: this.opts.authorEmail,
+    };
+  }
+
   public async describe(): Promise<BackendDescription> {
     return {
       verboseName: "Git+YAML",
