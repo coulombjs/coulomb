@@ -418,7 +418,7 @@ export class IsoGitWrapper {
           //await this.setStatus({ isPulling: false });
 
           // Run push AFTER pull. May result in false-positive non-fast-forward rejection
-          //await this.setStatus({ isPushing: true });
+          await this.setStatus({ isPushing: true });
           try {
             await this.push();
           } catch (e) {
