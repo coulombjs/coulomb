@@ -2,11 +2,11 @@ import { ipcRenderer } from 'electron';
 import * as log from 'electron-log';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { FormGroup, Classes } from '@blueprintjs/core';
+import { FormGroup, Classes, NonIdealState, Spinner, InputGroup, Button } from '@blueprintjs/core';
 
 import { AppConfig, DatabaseInfo } from '../../config/app';
 import { RendererConfig, DatabaseStatusComponentProps } from '../../config/renderer';
-import { useIPCValue } from '../../ipc/renderer';
+import { useIPCValue, callIPC } from '../../ipc/renderer';
 import { BackendDescription } from '../base';
 
 import styles from './status.scss';
@@ -115,3 +115,92 @@ export const DBStatus: React.FC<DBStatusProps> = function ({ dbName, meta, backe
     </FormGroup>
   );
 };
+
+
+export const PasswordPrompt: React.FC<{ onConfirm: () => void }> = function ({ onConfirm }) {
+  const [value, setValue] = useState('');
+
+  async function handlePasswordConfirm() {
+    await callIPC<{ password: string }, { success: true }>('db-default-git-set-password', { password: value });
+    onConfirm();
+  }
+
+  return <div className={styles.passwordPrompt}>
+    <FormGroup
+        label="Please enter repository password:"
+        helperText="The password will be kept in memory and not stored to disk.">
+      <InputGroup
+        type="password"
+        value={value}
+        onChange={(event: React.FormEvent<HTMLElement>) => setValue((event.target as HTMLInputElement).value)}
+        leftIcon="key"
+        rightElement={
+          value.trim() === ''
+          ? undefined
+          : <Button
+                minimal={true}
+                onClick={handlePasswordConfirm}
+                icon="tick"
+                intent="primary">
+              Confirm
+            </Button>}
+      />
+    </FormGroup>
+  </div>;
+};
+
+
+interface DBSyncScreenProps {
+  dbName: string
+  db: BackendDescription<any>
+}
+export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db }) {
+  useEffect(() => {
+    const status = db?.status || {};
+    const shouldTriggerSync = (
+      !status.hasLocalChanges &&
+      !status.isPushing &&
+      !status.isPulling &&
+      status.lastSynchronized === null &&
+      status.needsPassword === false
+    )
+    if (shouldTriggerSync) {
+      callIPC('db-default-git-trigger-sync');
+    }
+  }, [JSON.stringify(db)]);
+
+  let dbInitializationScreen: JSX.Element | null;
+
+  if (db?.status === undefined) {
+    dbInitializationScreen = <NonIdealState
+      icon={<Spinner />}
+      title="Initializing database"
+    />
+  } else if (db.status.needsPassword) {
+    dbInitializationScreen = <NonIdealState
+      icon="key"
+      title="Password required"
+      description={<PasswordPrompt onConfirm={() => void 0} />}
+    />
+  } else if (db.status.isPushing || db.status.isPulling) {
+    dbInitializationScreen = <NonIdealState
+      icon={<Spinner />}
+      title="Synchronizing data"
+      description={db.status.isPushing ? "Pushing changes" : "Pulling changes"}
+    />
+  } else if (db.status.lastSynchronized === null && db.status.hasLocalChanges === false) {
+    dbInitializationScreen = <NonIdealState
+      icon="cloud-download"
+      title="Synchronizing data"
+    />
+  } else {
+    dbInitializationScreen = null;
+    dbInitializationScreen = <NonIdealState
+      icon="tick"
+      title="Synchronized"
+      description="This message should go away in a second."
+    />
+  }
+
+  return dbInitializationScreen;
+}
