@@ -319,7 +319,7 @@ export class IsoGitWrapper {
     return (await git.statusMatrix({ dir: this.workDir, filepaths: pathSpecs }))
       .filter(row => row[HEAD] !== row[WORKDIR])
       .map(row => row[FILE])
-      .filter(filepath => !filepath.startsWith('..'));
+      .filter(filepath => !filepath.startsWith('..') && filepath !== ".DS_Store");
   }
 
   public async stageAndCommit(pathSpecs: string[], msg: string, removing = false): Promise<number> {
@@ -362,9 +362,11 @@ export class IsoGitWrapper {
        Notifies all windows about the status. */
 
     log.debug("C/db/isogit: Checking for uncommitted changes");
-    const hasUncommittedChanges = (await this.listChangedFiles()).length > 0;
-    await this.setStatus({ hasLocalChanges: hasUncommittedChanges });
-    return hasUncommittedChanges;
+    const changedFiles = await this.listChangedFiles();
+    log.debug("C/db/isogit: Changed files:", changedFiles);
+    const hasLocalChanges = changedFiles.length > 0;
+    await this.setStatus({ hasLocalChanges });
+    return hasLocalChanges;
   }
 
   public async synchronize(): Promise<void> {
@@ -379,6 +381,18 @@ export class IsoGitWrapper {
     }
 
     log.verbose("C/db/isogit: Queueing sync");
+
+    const hasUncommittedChanges = await this.checkUncommitted();
+
+    if (hasUncommittedChanges) {
+      // Do not run pull if there are unstaged/uncommitted changes
+      await this.setStatus({ hasLocalChanges: true });
+      return;
+    } else {
+      // If uncommitted changes weren’t detected, there may still be changed files
+      // that are not managed by the backend (e.g., .DS_Store). Discard any stuff like that.
+      await this.resetFiles(['.']);
+    }
 
     return await this.stagingLock.acquire('1', async () => {
       log.verbose("C/db/isogit: Starting sync");
@@ -398,52 +412,45 @@ export class IsoGitWrapper {
 
         await this.setStatus({ isOnline: true });
 
-        const hasUncommittedChanges = await this.checkUncommitted();
-
-        // Do not run pull if there are unstaged/uncommitted changes
-        if (!hasUncommittedChanges) {
-          await this.setStatus({ isPulling: true });
-          try {
-            await this.pull();
-          } catch (e) {
-            log.error(e);
-            await this.setStatus({
-              lastSynchronized: new Date(),
-              isPulling: false,
-              isPushing: false,
-            });
-            await this._handleGitError(e);
-            return;
-          }
-          //await this.setStatus({ isPulling: false });
-
-          // Run push AFTER pull. May result in false-positive non-fast-forward rejection
-          await this.setStatus({ isPushing: true });
-          try {
-            await this.push();
-          } catch (e) {
-            log.error(e);
-            await this.setStatus({
-              lastSynchronized: new Date(),
-              isPulling: false,
-              isPushing: false,
-            });
-            await this._handleGitError(e);
-            return;
-          }
-          //await this.setStatus({ isPushing: false });
-
+        await this.setStatus({ isPulling: true });
+        try {
+          await this.pull();
+        } catch (e) {
+          log.error(e);
           await this.setStatus({
-            statusRelativeToLocal: 'updated',
-            isMisconfigured: false,
             lastSynchronized: new Date(),
-            needsPassword: false,
-            isPushing: false,
             isPulling: false,
+            isPushing: false,
           });
-        } else {
-          await this.setStatus({ hasLocalChanges: true });
+          await this._handleGitError(e);
+          return;
         }
+        //await this.setStatus({ isPulling: false });
+
+        // Run push AFTER pull. May result in false-positive non-fast-forward rejection
+        await this.setStatus({ isPushing: true });
+        try {
+          await this.push();
+        } catch (e) {
+          log.error(e);
+          await this.setStatus({
+            lastSynchronized: new Date(),
+            isPulling: false,
+            isPushing: false,
+          });
+          await this._handleGitError(e);
+          return;
+        }
+        //await this.setStatus({ isPushing: false });
+
+        await this.setStatus({
+          statusRelativeToLocal: 'updated',
+          isMisconfigured: false,
+          lastSynchronized: new Date(),
+          needsPassword: false,
+          isPushing: false,
+          isPulling: false,
+        });
       }
     });
   }
