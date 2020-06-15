@@ -13,15 +13,11 @@ export const SingleDBStatusContext = React.createContext<null | BackendDescripti
   status: {},
 });
 const SingleDBStatusContextProvider: React.FC<SingleDBStatusContextProps> = function (props) {
+
   const ipcPrefix = `db-${props.dbName}`;
+
   const [backendStatus, updateBackendStatus] = useState(undefined as undefined | object);
   const description = useIPCValue(`${ipcPrefix}-describe`, null as null | BackendDescription<any>);
-
-  // Listen to status updates
-  function handleNewStatus(evt: any, newStatus: any) {
-    log.debug("Received new status for DB", props.dbName, newStatus);
-    updateBackendStatus(newStatus);
-  }
 
   useEffect(() => {
     ipcRenderer.on(`${ipcPrefix}-status`, handleNewStatus);
@@ -29,6 +25,12 @@ const SingleDBStatusContextProvider: React.FC<SingleDBStatusContextProps> = func
       ipcRenderer.removeListener(`${ipcPrefix}-status`, handleNewStatus);
     }
   }, []);
+
+  // Listen to status updates
+  function handleNewStatus(evt: any, newStatus: any) {
+    log.debug("Received new status for DB", props.dbName, newStatus);
+    updateBackendStatus(newStatus);
+  }
 
   return (
     <SingleDBStatusContext.Provider
