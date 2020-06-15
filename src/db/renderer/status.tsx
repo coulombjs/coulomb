@@ -82,10 +82,10 @@ export const DBStatus: React.FC<DBStatusProps> = function ({ dbName, meta, backe
     }
   }, []);
 
-  if (description.value !== null && BackendDetails !== null) {
-    log.silly("Rendering DB status widget for", dbName, meta.verboseName, description.value, status);
-    log.silly("Using widget", BackendDetails);
-  }
+  // if (description.value !== null && BackendDetails !== null) {
+  //   log.silly("Rendering DB status widget for", dbName, meta.verboseName, description.value, status);
+  //   log.silly("Using widget", BackendDetails);
+  // }
 
   const backendData = description.value;
 
