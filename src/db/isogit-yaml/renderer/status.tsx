@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
-import { Button, IconName, FormGroup, InputGroup, Intent, Popover, Position, ButtonGroup } from '@blueprintjs/core';
+import {
+  Button, IconName, FormGroup, InputGroup, Intent,
+  ButtonGroup, NonIdealState, Spinner,
+} from '@blueprintjs/core';
 
 import { callIPC, useIPCValue } from '../../../ipc/renderer';
 
@@ -18,53 +21,27 @@ function ({ dbIPCPrefix, status, description }) {
     useIPCValue(`${ipcPrefix}-count-uncommitted`, { numUncommitted: 0 }).
     value.numUncommitted;
 
-  useEffect(() => {
-    openPasswordPrompt(status.needsPassword);
-  }, [status.needsPassword]);
-
-  const [passwordPromptIsOpen, openPasswordPrompt] = useState(false);
-
-  async function setPassword(password: string) {
-    await callIPC<{ password: string }, { success: true }>(`${ipcPrefix}-git-set-password`, { password });
-  }
-
   return (
-    <Popover
-        boundary="viewport"
-        isOpen={passwordPromptIsOpen}
-        position={Position.BOTTOM}
-        targetTagName="div"
-        targetClassName={styles.base}
-        content={
-          <PasswordPrompt onConfirm={async (password) => {
-            setPassword(password);
-            openPasswordPrompt(false);
-          }} />
-        }>
-      <ButtonGroup fill vertical alignText="left">
-        <Button
-            className={styles.sourceInfo}
-            title={`${description.gitUsername}@${description.gitRepo}`}
-            icon="git-repo"
-            onClick={() => {
-              if (description.gitRepo) {
-                require('electron').shell.openExternal(description.gitRepo);
-              }
-            }}>
-          {description.gitUsername}@{description.gitRepo}
-        </Button>
+    <ButtonGroup fill vertical alignText="left">
+      <Button
+          className={styles.sourceInfo}
+          title={`${description.gitUsername}@${description.gitRepo}`}
+          icon="git-repo"
+          onClick={() => {
+            if (description.gitRepo) {
+              require('electron').shell.openExternal(description.gitRepo);
+            }
+          }}>
+        {description.gitUsername}@{description.gitRepo}
+      </Button>
 
-        <ActionableStatus
-          status={status}
-          uncommittedFileCount={numUncommitted}
-          onRequestSync={async () => await callIPC(`${ipcPrefix}-git-trigger-sync`)}
-          onDiscardUnstaged={async () => await callIPC(`${ipcPrefix}-git-discard-unstaged`)}
-          onPromptPassword={() => openPasswordPrompt(true)}
-          onShowCommitWindow={() => callIPC('open-predefined-window', { id: 'batchCommit' })}
-          onShowSettingsWindow={() => callIPC('open-predefined-window', { id: 'settings' })}
-        />
-      </ButtonGroup>
-    </Popover>
+      <ActionableStatus
+        status={status}
+        uncommittedFileCount={numUncommitted}
+        onRequestSync={async () => await callIPC(`${ipcPrefix}-git-trigger-sync`)}
+        onShowSettingsWindow={() => callIPC('open-predefined-window', { id: 'settings' })}
+      />
+    </ButtonGroup>
   );
 };
 
@@ -75,20 +52,16 @@ interface ActionableStatusProps {
   status: BackendStatus
   uncommittedFileCount: number
   onRequestSync: () => Promise<void>
-  onDiscardUnstaged: () => Promise<void>
-  onPromptPassword: () => void
-  onShowCommitWindow: () => void
   onShowSettingsWindow: () => void
 }
 const ActionableStatus: React.FC<ActionableStatusProps> = function ({
     status, uncommittedFileCount,
-    onRequestSync, onDiscardUnstaged,
-    onPromptPassword,
-    onShowCommitWindow, onShowSettingsWindow }) {
+    onRequestSync,
+    onShowSettingsWindow }) {
 
   let statusIcon: IconName;
   let tooltipText: string | undefined;
-  let statusIntent: Intent;
+  let statusIntent: Intent | undefined;
   let action: null | (() => void);
 
   if (status.isMisconfigured) {
@@ -101,39 +74,13 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
     statusIcon = "offline";
     tooltipText = "Sync now"
     statusIntent = "primary";
-    action = status.needsPassword ? onPromptPassword : onRequestSync;
+    action = onRequestSync;
 
-  } else if (status.needsPassword) {
-    statusIcon = "lock";
-    tooltipText = "Provide password & sync";
-    statusIntent = "primary";
-    action = onPromptPassword;
-
-  } else if (status.hasLocalChanges) {
+  } else if (status.hasLocalChanges && uncommittedFileCount > 0) {
     statusIcon = "git-commit";
-    tooltipText = "Commit & sync";
-    statusIntent = "primary";
-    action = async () => {
-      if (status.hasLocalChanges && uncommittedFileCount < 1) {
-        // NOTE: If hasLocalChanges says yes, but uncommitted file count says no, try to fix it.
-        await onDiscardUnstaged();
-        await onRequestSync();
-      } else {
-        onShowCommitWindow();
-      }
-    }
-
-  } else if (status.isPulling) {
-    statusIcon = "cloud-download"
-    tooltipText = "Syncing…";
-    statusIntent = "primary";
-    action = null;
-
-  } else if (status.isPushing) {
-    statusIcon = "cloud-upload"
-    tooltipText = "Syncing…";
-    statusIntent = "primary";
-    action = null;
+    tooltipText = "Sync now";
+    statusIntent = undefined;
+    action = onRequestSync;
 
   } else if (status.statusRelativeToLocal === 'diverged') {
     statusIcon = "git-branch"
@@ -160,16 +107,21 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
         onClick={action || (() => {})}
         icon={statusIcon}
         intent={statusIntent}
-        disabled={action === null}
-        loading={action === null}>
+        disabled={action === null}>
       {tooltipText}
     </Button>
   );
 };
 
 
-const PasswordPrompt: React.FC<{ onConfirm: (value: string) => Promise<void> }> = function ({ onConfirm }) {
+export const PasswordPrompt: React.FC<{ dbIPCPrefix: string, onConfirm: () => void }> =
+function ({ dbIPCPrefix, onConfirm }) {
   const [value, setValue] = useState('');
+
+  async function handlePasswordConfirm() {
+    await callIPC<{ password: string }, { success: true }>(`${dbIPCPrefix}-git-set-password`, { password: value });
+    onConfirm();
+  }
 
   return <div className={styles.passwordPrompt}>
     <FormGroup
@@ -184,8 +136,8 @@ const PasswordPrompt: React.FC<{ onConfirm: (value: string) => Promise<void> }> 
           value.trim() === ''
           ? undefined
           : <Button
-                minimal
-                onClick={async () => await onConfirm(value)}
+                minimal={true}
+                onClick={handlePasswordConfirm}
                 icon="tick"
                 intent="primary">
               Confirm
@@ -194,3 +146,55 @@ const PasswordPrompt: React.FC<{ onConfirm: (value: string) => Promise<void> }> 
     </FormGroup>
   </div>;
 };
+
+
+interface DBSyncScreenProps {
+  dbName: string
+  db: BackendDescription
+  onDismiss: () => void
+}
+export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db, onDismiss }) {
+  let dbInitializationScreen: JSX.Element | null;
+
+  if (db?.status === undefined) {
+    dbInitializationScreen = <NonIdealState
+      icon={<Spinner />}
+      title="Initializing database"
+    />
+
+  } else if (db.status.needsPassword) {
+    dbInitializationScreen = <NonIdealState
+      icon="key"
+      title="Password required"
+      description={<PasswordPrompt dbIPCPrefix={`db-${dbName}`} onConfirm={() => void 0} />}
+    />
+
+  } else if (db.status.isPushing || db.status.isPulling) {
+    dbInitializationScreen = <NonIdealState
+      icon={db.status.isPushing ? "cloud-upload" : "cloud-download"}
+      title="Synchronizing data"
+      description={db.status.isPushing ? "Pushing changes" : "Pulling changes"}
+    />
+
+  } else if (db.status.lastSynchronized === null && db.status.hasLocalChanges === false) {
+    dbInitializationScreen = <NonIdealState
+      icon={<Spinner />}
+      title="Synchronizing data"
+    />
+
+  } else if (db.status.lastSynchronized !== null) {
+    dbInitializationScreen = <NonIdealState
+      icon="tick"
+      title="Ready"
+      description={<Button onClick={onDismiss} intent="primary">Dismiss</Button>}
+    />
+  } else {
+    dbInitializationScreen = <NonIdealState
+      icon="tick"
+      title="Ready"
+      description={<Button onClick={onDismiss} intent="primary">Dismiss</Button>}
+    />
+  }
+
+  return dbInitializationScreen;
+}
