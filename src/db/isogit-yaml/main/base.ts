@@ -86,8 +86,9 @@ class Backend extends VersionedFilesystemBackend {
     return this.fs.expandPath(id);
   }
 
-  public async getCurrentCommitterInformation(): Promise<{ name: string, email: string }> {
+  public async getCurrentCommitterInformation(): Promise<{ username: string, name: string, email: string }> {
     return {
+      username: this.opts.username,
       name: this.opts.authorName,
       email: this.opts.authorEmail,
     };
@@ -395,13 +396,23 @@ class Backend extends VersionedFilesystemBackend {
       return { success: true };
     });
 
-    listen<{}, { originURL: string | null, name: string | null, email: string | null, username: string | null }>
+    listen<{}, { username: string, email: string, name: string }>
+    (`${prefix}-get-current-committer-info`, async () => {
+      const authorInfo = await this.getCurrentCommitterInformation();
+      return {
+        username: authorInfo.username,
+        email: authorInfo.email,
+        name: authorInfo.name,
+      };
+    });
+
+    listen<{}, { originURL: string | null, username: string | null }>
     (`${prefix}-git-config-get`, async () => {
       log.verbose("C/db/isogit-yaml: received git-config request");
       return {
         originURL: await this.git.getOriginUrl(),
-        name: await this.git.configGet('user.name'),
-        email: await this.git.configGet('user.email'),
+        // name: await this.git.configGet('user.name'),
+        // email: await this.git.configGet('user.email'),
         username: await this.git.configGet('credentials.username'),
         // Password must not be returned, of course
       };
