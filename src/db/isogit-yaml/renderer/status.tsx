@@ -179,7 +179,7 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
   } else if (db.status.lastSynchronized === null && db.status.hasLocalChanges === false) {
     dbInitializationScreen = <NonIdealState
       icon={<Spinner />}
-      title="Synchronizing data"
+      title="Connecting"
     />
 
   } else if (db.status.lastSynchronized !== null) {
