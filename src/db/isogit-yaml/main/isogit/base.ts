@@ -153,6 +153,7 @@ export class IsoGitWrapper {
 
   public setPassword(value: string | undefined) {
     this.auth.password = value;
+    this.setStatus({ needsPassword: false });
   }
 
 
