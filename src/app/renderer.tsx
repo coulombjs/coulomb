@@ -198,7 +198,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       if (shouldRefresh) {
         object.refresh();
       }
-    });
+    }, [objectID]);
 
     return {
       object: object.value.object,

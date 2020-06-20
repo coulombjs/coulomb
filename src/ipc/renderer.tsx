@@ -36,11 +36,11 @@ const ipcEndpointRequestLock = new AsyncLock({ maxPending: 1000 });
 
 
 export function useIPCEvent<P extends object>
-(endpointName: string, handler: (payload: P) => void) {
+(endpointName: string, handler: (payload: P) => void, memoizeArguments: any[] = []) {
   /* Sets up main -> renderer event listener & cleanup on component destruction. */
 
   function handleEvent(evt: Electron.Event, payload: P) {
-    log.silly("C/ipc/useIPCEvent: Handling IPC event", endpointName);
+    log.silly("C/ipc/useIPCEvent: Handling IPC event", endpointName, payload);
     handler(payload);
   }
 
@@ -49,7 +49,7 @@ export function useIPCEvent<P extends object>
     return function cleanup() {
       ipcRenderer.removeListener(endpointName, handleEvent);
     }
-  }, []);
+  }, memoizeArguments);
 }
 
 
