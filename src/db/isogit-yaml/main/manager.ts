@@ -150,6 +150,8 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
         ? (this.managerConfig.metaFields as string[])
         : undefined);
 
+    await this.reportUpdatedData([objID]);
+
     if (commit !== false) {
       await this.commitOne(
         objID,
@@ -157,8 +159,6 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
         'update',
         false,
         newData);
-
-      await this.reportUpdatedData([objID]);
     }
   }
 
