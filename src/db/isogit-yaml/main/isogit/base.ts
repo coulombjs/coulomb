@@ -111,41 +111,43 @@ export class IsoGitWrapper {
   private async forceInitialize() {
     /* Initializes from scratch: wipes work directory, clones repository, adds remotes. */
 
-    log.warn("C/db/isogit: Initializing");
+    return await this.stagingLock.acquire('1', async () => {
+      log.warn("C/db/isogit: Initializing");
 
-    log.silly("C/db/isogit: Initialize: Ensuring data directory exists");
-    await this.fs.ensureDir(this.workDir);
+      log.silly("C/db/isogit: Initialize: Ensuring data directory exists");
+      await this.fs.ensureDir(this.workDir);
 
-    log.verbose("C/db/isogit: Initialize: Cloning", this.repoUrl);
+      log.verbose("C/db/isogit: Initialize: Cloning", this.repoUrl);
 
-    try {
-      await git.clone({
-        dir: this.workDir,
-        url: this.repoUrl,
-        ref: 'master',
-        singleBranch: true,
-        depth: 5,
-        corsProxy: this.corsProxy,
-        ...this.auth,
-      });
-
-      if (this.upstreamRepoUrl !== undefined) {
-        log.debug("C/db/isogit: Initialize: Adding upstream remote", this.upstreamRepoUrl);
-        await git.addRemote({
+      try {
+        await git.clone({
           dir: this.workDir,
-          remote: UPSTREAM_REMOTE,
-          url: this.upstreamRepoUrl,
+          url: this.repoUrl,
+          ref: 'master',
+          singleBranch: true,
+          depth: 5,
+          corsProxy: this.corsProxy,
+          ...this.auth,
         });
-      } else {
-        log.warn("C/db/isogit: Initialize: No upstream remote specified");
-      }
 
-    } catch (e) {
-      log.error("C/db/isogit: Error during initialization")
-      await this.fs.remove(this.workDir);
-      await this._handleGitError(e);
-      throw e;
-    }
+        if (this.upstreamRepoUrl !== undefined) {
+          log.debug("C/db/isogit: Initialize: Adding upstream remote", this.upstreamRepoUrl);
+          await git.addRemote({
+            dir: this.workDir,
+            remote: UPSTREAM_REMOTE,
+            url: this.upstreamRepoUrl,
+          });
+        } else {
+          log.warn("C/db/isogit: Initialize: No upstream remote specified");
+        }
+
+      } catch (e) {
+        log.error("C/db/isogit: Error during initialization")
+        await this.fs.remove(this.workDir);
+        await this._handleGitError(e);
+        throw e;
+      }
+    });
   }
 
 
@@ -376,24 +378,33 @@ export class IsoGitWrapper {
 
        Notifies all windows about the status in process. */
 
+    log.verbose("C/db/isogit: Checking if clone exists");
+
+    if (!(await this.isInitialized())) {
+      await this.forceInitialize();
+
+    } else {
+      log.verbose("C/db/isogit: Checking for uncommitted changes");
+
+      const hasUncommittedChanges = await this.checkUncommitted();
+
+      if (hasUncommittedChanges) {
+        // Do not run pull if there are unstaged/uncommitted changes
+        await this.setStatus({ hasLocalChanges: true });
+        return;
+      } else {
+        // If uncommitted changes weren’t detected, there may still be changed files
+        // that are not managed by the backend (e.g., .DS_Store). Discard any stuff like that.
+        await this.resetFiles(['.']);
+      }
+    }
+
     if (this.stagingLock.isBusy()) {
       log.verbose("C/db/isogit: Lock is busy, skipping sync");
       return;
     }
 
-    log.verbose("C/db/isogit: Queueing sync");
-
-    const hasUncommittedChanges = await this.checkUncommitted();
-
-    if (hasUncommittedChanges) {
-      // Do not run pull if there are unstaged/uncommitted changes
-      await this.setStatus({ hasLocalChanges: true });
-      return;
-    } else {
-      // If uncommitted changes weren’t detected, there may still be changed files
-      // that are not managed by the backend (e.g., .DS_Store). Discard any stuff like that.
-      await this.resetFiles(['.']);
-    }
+    log.verbose("C/db/isogit: Queueing sync now, lock is not busy");
 
     return await this.stagingLock.acquire('1', async () => {
       log.verbose("C/db/isogit: Starting sync");
@@ -405,10 +416,6 @@ export class IsoGitWrapper {
         await this.setStatus({ needsPassword });
         if (needsPassword) {
           return;
-        }
-
-        if (!(await this.isInitialized())) {
-          await this.forceInitialize();
         }
 
         await this.setStatus({ isOnline: true });
