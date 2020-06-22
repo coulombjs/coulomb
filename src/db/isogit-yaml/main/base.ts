@@ -244,6 +244,12 @@ class Backend extends VersionedFilesystemBackend {
     await this.fs.write(objPath, obj, metaFields);
   }
 
+  public async commitAll(msg: string, removing: boolean) {
+    // NOTE: Use with care.
+
+    await this.git.stageAndCommit(['.'], msg, removing);
+  }
+
   public async commit(objIDs: string[], message: string, removing = false) {
     await this.resetOrphanedFileChanges();
 
