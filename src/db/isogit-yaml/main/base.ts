@@ -217,7 +217,7 @@ class Backend extends VersionedFilesystemBackend {
       await this.git.destroy();
     }
 
-    await this.git.synchronize();
+    await this.synchronize();
   }
 
   public async read(objID: string, metaFields?: string[]) {
@@ -352,8 +352,9 @@ class Backend extends VersionedFilesystemBackend {
     await this.git.synchronize();
 
     for (const mgr of this.managers) {
+      log.debug("C/initMain: Initializing manager");
       await mgr.init();
-      mgr.reportUpdatedData();
+      await mgr.reportUpdatedData();
     }
   }
 
