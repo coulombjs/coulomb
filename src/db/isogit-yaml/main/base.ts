@@ -396,7 +396,6 @@ class Backend extends VersionedFilesystemBackend {
       log.verbose("C/db/isogit-yaml: received git-set-password request");
 
       this.git.setPassword(password);
-      this.synchronize();
 
       return { success: true };
     });
