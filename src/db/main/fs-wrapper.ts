@@ -95,7 +95,10 @@ export abstract class AbstractLockingFilesystemWrapper<T> implements FilesystemW
   public async listIDs(query: { subdir?: string }, ...listArg: any[]) {
     const dir = query.subdir ? path.join(this.baseDir, query.subdir) : this.baseDir;
 
-    const potentialIDs = (await fs.readdir(dir));
+    const potentialIDs = await this.fileAccessLock.acquire(dir, async () => {
+      return await fs.readdir(dir);
+    });
+
     var ids: string[] = [];
     for (const maybeID of potentialIDs) {
       if (await this.isValidID(query.subdir ? path.join(query.subdir, maybeID) : maybeID)) {
