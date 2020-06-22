@@ -21,6 +21,12 @@ function ({ dbIPCPrefix, status, description }) {
     useIPCValue(`${ipcPrefix}-count-uncommitted`, { numUncommitted: 0 }).
     value.numUncommitted;
 
+  // Requests sync with push
+  async function handleRequestFullSync() {
+    await callIPC(`${ipcPrefix}-git-request-push`);
+    await callIPC(`${ipcPrefix}-git-trigger-sync`);
+  }
+
   return (
     <ButtonGroup fill vertical alignText="left">
       <Button
@@ -38,7 +44,7 @@ function ({ dbIPCPrefix, status, description }) {
       <ActionableStatus
         status={status}
         uncommittedFileCount={numUncommitted}
-        onRequestSync={async () => await callIPC(`${ipcPrefix}-git-trigger-sync`)}
+        onRequestFullSync={handleRequestFullSync}
         onShowSettingsWindow={() => callIPC('open-predefined-window', { id: 'settings' })}
       />
     </ButtonGroup>
@@ -51,12 +57,12 @@ export default BackendDetails;
 interface ActionableStatusProps {
   status: BackendStatus
   uncommittedFileCount: number
-  onRequestSync: () => Promise<void>
+  onRequestFullSync: () => Promise<void>
   onShowSettingsWindow: () => void
 }
 const ActionableStatus: React.FC<ActionableStatusProps> = function ({
     status, uncommittedFileCount,
-    onRequestSync,
+    onRequestFullSync,
     onShowSettingsWindow }) {
 
   let statusIcon: IconName;
@@ -74,31 +80,31 @@ const ActionableStatus: React.FC<ActionableStatusProps> = function ({
     statusIcon = "offline";
     tooltipText = "Sync now"
     statusIntent = "primary";
-    action = onRequestSync;
+    action = onRequestFullSync;
 
   } else if (status.hasLocalChanges && uncommittedFileCount > 0) {
     statusIcon = "git-commit";
     tooltipText = "Sync now";
     statusIntent = undefined;
-    action = onRequestSync;
+    action = onRequestFullSync;
 
   } else if (status.statusRelativeToLocal === 'diverged') {
     statusIcon = "git-branch"
     tooltipText = "Resolve conflict and sync";
     statusIntent = "warning";
-    action = onRequestSync;
+    action = onRequestFullSync;
 
   } else if (status.statusRelativeToLocal === 'behind') {
     statusIcon = "cloud-upload"
     tooltipText = "Sync now";
     statusIntent = "primary";
-    action = onRequestSync;
+    action = onRequestFullSync;
 
   } else {
     statusIcon = "updated"
     tooltipText = "Sync now";
     statusIntent = "primary";
-    action = onRequestSync;
+    action = onRequestFullSync;
   }
 
   return (
@@ -120,6 +126,7 @@ function ({ dbIPCPrefix, onConfirm }) {
 
   async function handlePasswordConfirm() {
     await callIPC<{ password: string }, { success: true }>(`${dbIPCPrefix}-git-set-password`, { password: value });
+    await callIPC(`${dbIPCPrefix}-git-trigger-sync`);
     onConfirm();
   }
 
@@ -173,7 +180,7 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
     dbInitializationScreen = <NonIdealState
       icon={db.status.isPushing ? "cloud-upload" : "cloud-download"}
       title="Synchronizing data"
-      description={db.status.isPushing ? "Pushing changes" : "Pulling changes"}
+      description={db.status.isPushing ? "Sending changes" : "Fetching changes"}
     />
 
   } else if (db.status.lastSynchronized === null && db.status.hasLocalChanges === false) {

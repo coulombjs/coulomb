@@ -28,6 +28,8 @@ export class IsoGitWrapper {
 
   private auth: GitAuthentication = {};
 
+  private pushPending = false;
+
   private stagingLock: AsyncLock;
 
   private status: GitStatus;
@@ -372,6 +374,10 @@ export class IsoGitWrapper {
     return hasLocalChanges;
   }
 
+  public requestPush() {
+    this.pushPending = true;
+  }
+
   public async synchronize(): Promise<void> {
     /* Checks for connection, local changes and unpushed commits,
        tries to push and pull when there’s opportunity.
@@ -435,21 +441,24 @@ export class IsoGitWrapper {
         }
         //await this.setStatus({ isPulling: false });
 
-        // Run push AFTER pull. May result in false-positive non-fast-forward rejection
-        await this.setStatus({ isPushing: true });
-        try {
-          await this.push();
-        } catch (e) {
-          log.error(e);
-          await this.setStatus({
-            lastSynchronized: new Date(),
-            isPulling: false,
-            isPushing: false,
-          });
-          await this._handleGitError(e);
-          return;
+        if (this.pushPending) {
+          // Run push AFTER pull. May result in false-positive non-fast-forward rejection
+          await this.setStatus({ isPushing: true });
+          try {
+            await this.push();
+          } catch (e) {
+            log.error(e);
+            await this.setStatus({
+              lastSynchronized: new Date(),
+              isPulling: false,
+              isPushing: false,
+            });
+            await this._handleGitError(e);
+            return;
+          }
+          this.pushPending = false;
+          //await this.setStatus({ isPushing: false });
         }
-        //await this.setStatus({ isPushing: false });
 
         await this.setStatus({
           statusRelativeToLocal: 'updated',

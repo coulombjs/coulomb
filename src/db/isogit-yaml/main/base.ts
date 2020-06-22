@@ -401,6 +401,12 @@ class Backend extends VersionedFilesystemBackend {
       return { success: true };
     });
 
+    listen<{}, { success: true }>
+    (`${prefix}-git-request-push`, async () => {
+      this.git.requestPush();
+      return { success: true };
+    });
+
     listen<{}, { username: string, email: string, name: string }>
     (`${prefix}-get-current-committer-info`, async () => {
       const authorInfo = await this.getCurrentCommitterInformation();
