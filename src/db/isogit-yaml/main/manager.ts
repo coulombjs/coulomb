@@ -137,7 +137,8 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
     return idx;
   }
 
-  public async update(objID: IDType, newData: M, commit: boolean | string = false) {
+  // Update skipping commit and notifications
+  public async rawUpdate(objID: IDType, newData: M) {
     if (objID !== newData[this.managerConfig.idField]) {
       log.error("Attempt to update object ID", objID, newData);
       throw new Error("Updating object IDs is not supported at the moment.");
@@ -149,6 +150,10 @@ extends ModelManager<M, IDType, Q> implements FilesystemManager {
       this.managerConfig.metaFields
         ? (this.managerConfig.metaFields as string[])
         : undefined);
+  }
+
+  public async update(objID: IDType, newData: M, commit: boolean | string = false) {
+    await this.rawUpdate(objID, newData);
 
     await this.reportUpdatedData([objID]);
 
