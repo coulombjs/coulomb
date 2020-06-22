@@ -297,11 +297,6 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     await backend.init();
   }
 
-  for (const [managerID, manager] of Object.entries(managers)) {
-    log.debug("C/initMain: Initializing manager", managerID);
-    await manager.init();
-  }
-
   const initializedMain: MainApp<typeof config.app, typeof config> = {
     app,
     isMacOS,
