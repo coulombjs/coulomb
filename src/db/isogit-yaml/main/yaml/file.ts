@@ -1,3 +1,4 @@
+import * as log from 'electron-log';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 
@@ -34,11 +35,18 @@ class YAMLWrapper<T extends YAML = YAML> extends AbstractLockingFilesystemWrappe
 
   protected dumpData(data: any): string {
     if (data !== undefined && data !== null) {
-      return yaml.dump(data, {
-        schema: Schema,
-        noRefs: true,
-        noCompatMode: true,
-      });
+      try {
+        return yaml.dump(data, {
+          schema: Schema,
+          noRefs: true,
+          noCompatMode: true,
+        });
+
+      } catch (e) {
+        log.debug("Dumping data encountered an exception", data);
+        log.error("Failed to dump data.");
+        throw e;
+      }
 
     } else {
       throw new Error("Attempt to write invalid data (null or undefined)");
