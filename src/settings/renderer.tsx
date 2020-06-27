@@ -64,6 +64,14 @@ const SettingsScreen: React.FC<WindowComponentProps> = function ({ query }) {
   const settings = useIPCValue('settingList', { settings: [] as Setting<any>[] }).
     value.settings;
 
+  const [selectedTabID, selectTabID] = useState<Pane["id"] | undefined>(undefined);
+
+  useEffect(() => {
+    if (panes.length > 0 && selectedTabID === undefined) {
+      selectTabID(panes[0].id);
+    }
+  }, [panes.length]);
+
   // Determine whether user was requested to supply specific settings
   let requiredSettingIDs: string[];
   const maybeRequiredSettings = query.get('requiredSettings')
@@ -84,11 +92,15 @@ const SettingsScreen: React.FC<WindowComponentProps> = function ({ query }) {
 
   } else {
     settingWidgetGroup = (
-      <Tabs>
+      <Tabs
+          vertical
+          className={styles.tabs}
+          selectedTabId={selectedTabID}
+          onChange={(newTabID) => selectTabID(`${newTabID}`)}>
         {panes.map(pane => (
           <Tab
             key={pane.id}
-            id={pane.id}
+            id={`${pane.id}`}
             title={pane.label}
             panel={<SettingInputList settings={settings.filter(s => s.paneID === pane.id)} />}
           />

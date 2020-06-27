@@ -13,6 +13,12 @@ html, body, #app {
   background: $pt-app-background-color;
 }
 
+:local .tabs {
+  :global .bp3-tab-panel {
+    flex: 1;
+  }
+}
+
 :local .base {
   padding: 2rem;
   flex: 1;
