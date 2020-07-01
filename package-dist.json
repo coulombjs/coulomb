@@ -1,6 +1,6 @@
 {
   "name": "coulomb",
-  "version": "0.5.0-pre7",
+  "version": "0.5.1",
   "main": "index.js",
   "types": "index.d.ts",
 
