@@ -157,16 +157,6 @@ const SettingInput: React.FC<SettingsInputProps> = function ({ label, ipcSetting
         onChange={(evt: React.FormEvent<HTMLElement>) => {
           ipcSetting.set((evt.target as HTMLInputElement).value as string);
         }}
-        rightElement={
-          <Button
-              disabled={!ipcSetting.changed()}
-              onClick={ipcSetting.commit}
-              tabIndex={-1}
-              title="Save setting"
-              icon="tick">
-            Save
-          </Button>
-        }
       />
     </FormGroup>
   );
