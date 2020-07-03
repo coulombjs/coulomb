@@ -41,7 +41,7 @@ export class IsoGitWrapper {
       username: string,
       private author: { name: string, email: string },
       public workDir: string,
-      private corsProxy: string,
+      private corsProxy: string | undefined,
       private statusReporter: (payload: GitStatus) => Promise<void>) {
 
     git.plugins.set('fs', fs);

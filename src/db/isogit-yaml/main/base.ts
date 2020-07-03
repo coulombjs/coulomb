@@ -27,7 +27,7 @@ interface FixedBackendOptions {
   /* Settings supplied by the developer */
 
   workDir: string
-  corsProxyURL: string
+  corsProxyURL?: string
   upstreamRepoURL?: string
   fsWrapperClass: new (baseDir: string) => FilesystemWrapper<any>
 }
