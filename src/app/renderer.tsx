@@ -216,7 +216,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       const ctxProviderConfig = config.contextProviders || [];
 
       // Get props prescribed for each context provider component
-      var ctxProviderProps = ctxProviderConfig.map(item => item.getProps(config));
+      var ctxProviderProps = await Promise.all(ctxProviderConfig.map(item => item.getProps(config)));
 
       log.silly(
         `C/renderApp: Resolving components`,

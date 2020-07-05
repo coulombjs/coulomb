@@ -20,7 +20,7 @@ export interface RendererConfig<App extends AppConfig> {
 
 export interface ContextProviderConfig<Props> {
   cls: () => Promise<{ default: React.FC<Props> }>
-  getProps: (config: RendererConfig<any>) => Props
+  getProps: (config: RendererConfig<any>) => Promise<Props>
 }
 
 
