@@ -392,6 +392,12 @@ export class IsoGitWrapper {
     } else {
       log.verbose("C/db/isogit: Checking for uncommitted changes");
 
+      await this.setStatus({
+        ...INITIAL_STATUS,
+        hasLocalChanges: false,
+        lastSynchronized: this.status.lastSynchronized,
+      });
+
       const hasUncommittedChanges = await this.checkUncommitted();
 
       if (hasUncommittedChanges) {
