@@ -21,7 +21,7 @@ const INITIAL_STATUS: GitStatus = {
   lastSynchronized: null,
   isPushing: false,
   isPulling: false,
-}
+} as const;
 
 
 export class IsoGitWrapper {
