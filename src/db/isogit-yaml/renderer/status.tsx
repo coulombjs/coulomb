@@ -1,8 +1,10 @@
+import { shell } from 'electron';
+import * as log from 'electron-log';
 import React, { useState } from 'react';
 
 import {
   Button, IconName, FormGroup, InputGroup, Intent,
-  ButtonGroup, NonIdealState, Spinner,
+  ButtonGroup, NonIdealState, Spinner, Callout,
 } from '@blueprintjs/core';
 
 import { callIPC, useIPCValue } from '../../../ipc/renderer';
@@ -199,19 +201,106 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
       title="Connecting"
     />
 
+  } else if (db.status.statusRelativeToLocal === 'diverged') {
+    dbInitializationScreen = <NonIdealState
+      icon="warning-sign"
+      title="Diverging changes found"
+      description={<>
+        <p>
+          Failed to integrate local and remote changes.
+        </p>
+        <p>
+          To resolve, you may want to contact registry manager representative.
+        </p>
+
+        <Button onClick={onDismiss} intent="primary">Dismiss</Button>
+
+        <TechnicalGitNotice clonePath={db.localClonePath}>
+          <p>
+            Unable to perform Git fast-forward merge.
+            It is possible that the same object was modified by multiple users.
+          </p>
+          <p>
+            May be resolvable with <code>git rebase origin/maste</code>
+            (use at your risk, or get in touch with registry manager).
+          </p>
+        </TechnicalGitNotice>
+      </>}
+    />
+
+  } else if (db.status.hasLocalChanges === true) {
+    dbInitializationScreen = <NonIdealState
+      icon="warning-sign"
+      title="Cannot synchronize"
+      description={<>
+        <p>Uncommitted changes present.</p>
+
+        <Button onClick={onDismiss} intent="primary">Dismiss</Button>
+
+        <TechnicalGitNotice clonePath={db.localClonePath}>
+          <p>
+            Uncommitted or unstaged changes present in local clone.
+          </p>
+          <p>
+            May be resolvable with <code>git status</code> and manually discarding/staging/committing the changes
+            (use at your risk, or get in touch with registry manager).
+          </p>
+        </TechnicalGitNotice>
+      </>}
+    />
+
   } else if (db.status.lastSynchronized !== null) {
     dbInitializationScreen = <NonIdealState
       icon="tick"
       title="Ready"
-      description={<Button onClick={onDismiss} intent="primary">Dismiss</Button>}
+      description={<>
+        <p>Last synchronized: {db.status.lastSynchronized.toISOString()}</p>
+        <Button onClick={onDismiss} intent="primary">Dismiss</Button>
+      </>}
     />
+
   } else {
     dbInitializationScreen = <NonIdealState
-      icon="tick"
+      icon="warning-sign"
       title="Ready"
-      description={<Button onClick={onDismiss} intent="primary">Dismiss</Button>}
+      description={<>
+        <p>Last synchronized: N/A</p>
+        <Button onClick={onDismiss} intent="primary">Synchronize later</Button>
+      </>}
     />
+
+  }
+  return dbInitializationScreen;
+};
+
+
+const TechnicalGitNotice: React.FC<{ clonePath: string | undefined }> = function ({ clonePath, children }) {
+  function openLocalClonePath() {
+    if (clonePath) {
+      log.debug("Revealing local clone folder", clonePath);
+      shell.showItemInFolder(clonePath);
+    } else {
+      log.error("Unable to reveal local clone folder: not specified in backend description.");
+    }
   }
 
-  return dbInitializationScreen;
-}
+  return (
+    <Callout title="Technical information" icon="cog"
+        style={{ textAlign: 'left', marginTop: '2rem', fontSize: '90%' }}>
+
+      {children}
+
+      <p>
+        If you have Git CLI installed,
+        you can attempt to resolve this manually.
+        Local clone path {clonePath ? <a onClick={openLocalClonePath}>(reveal)</a> : null}:
+        {" "}
+        <code>{clonePath || 'N/A'}</code>.
+      </p>
+      <p>
+        Note that the repository was initialized by Git implementation in Node,
+        which is different than the official Git CLI, but most Git CLI commands should work.
+      </p>
+    </Callout>
+  );
+};
