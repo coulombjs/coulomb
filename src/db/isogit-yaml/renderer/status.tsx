@@ -17,7 +17,7 @@ const BackendDetails: React.FC<DatabaseStatusComponentProps<BackendDescription, 
 function ({ dbIPCPrefix, status, description }) {
   const ipcPrefix = dbIPCPrefix;
 
-  const numUncommitted = 
+  const numUncommitted =
     useIPCValue(`${ipcPrefix}-count-uncommitted`, { numUncommitted: 0 }).
     value.numUncommitted;
 
