@@ -478,7 +478,7 @@ export class IsoGitWrapper {
   }
 
   private async _handleGitError(e: Error & { code: string }): Promise<void> {
-    log.debug("Handling Git error", e);
+    log.debug("Handling Git error", e.code, e);
 
     if (e.code === 'FastForwardFail' || e.code === 'MergeNotSupportedFail') {
       // NOTE: There’s also PushRejectedNonFastForward, but it seems to be thrown
