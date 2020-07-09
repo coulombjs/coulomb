@@ -494,6 +494,9 @@ export class IsoGitWrapper {
       await this.setStatus({ statusRelativeToLocal: 'diverged' });
     } else if (['MissingUsernameError', 'MissingAuthorError', 'MissingCommitterError'].indexOf(e.code) >= 0) {
       await this.setStatus({ isMisconfigured: true });
+    } else if (e.code === 'EHOSTDOWN') {
+      await this.setStatus({ isOnline: false });
+      log.warn("Possible connection issues");
     } else if (
         e.code === 'MissingPasswordTokenError'
         || (e.code === 'HTTPError' && e.message.indexOf('Unauthorized') >= 0)) {
