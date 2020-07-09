@@ -161,7 +161,7 @@ interface DBSyncScreenProps {
   onDismiss: () => void
 }
 export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db, onDismiss }) {
-  let dbInitializationScreen: JSX.Element | null;
+  let dbInitializationScreen: JSX.Element;
 
   if (db?.status === undefined) {
     dbInitializationScreen = <NonIdealState
