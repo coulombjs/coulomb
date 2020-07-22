@@ -48,7 +48,6 @@
     "webpack": "~4.41.5"
   },
   "dependencies": {
-    "@isomorphic-git/lightning-fs": "^3.3.3",
     "async-lock": "^1.2.2",
     "fs-extra": "^8.1.0",
     "immer": "^3.1.3",
