@@ -25,7 +25,11 @@ const INITIAL_STATUS: GitStatus = {
 } as const;
 
 
-const workerContents =  fs.readFileSync(path.resolve(__dirname, 'worker.js'), { encoding: 'utf8' });
+const workerFilePath = __dirname.endsWith('app.asar')
+  ? path.resolve(__dirname, '..', 'isogit-worker.js')
+  : path.resolve(__dirname, 'worker.js');
+
+const workerContents =  fs.readFileSync(workerFilePath, { encoding: 'utf8' });
 
 
 export class IsoGitWrapper {
