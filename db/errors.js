@@ -1,0 +1,15 @@
+export class DBError extends Error {
+    constructor(msg) {
+        super(msg);
+        Object.setPrototypeOf(this, new.target.prototype);
+    }
+}
+export class UniqueConstraintError extends DBError {
+    constructor(fieldName, objectId) {
+        super(`Value for field ${fieldName} is non-unique: ${objectId}`);
+        this.fieldName = fieldName;
+        this.objectId = objectId;
+        Object.setPrototypeOf(this, new.target.prototype);
+    }
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZXJyb3JzLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vc3JjL2RiL2Vycm9ycy50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxNQUFNLE9BQU8sT0FBUSxTQUFRLEtBQUs7SUFDaEMsWUFBWSxHQUFXO1FBQ3JCLEtBQUssQ0FBQyxHQUFHLENBQUMsQ0FBQztRQUNYLE1BQU0sQ0FBQyxjQUFjLENBQUMsSUFBSSxFQUFFLEdBQUcsQ0FBQyxNQUFNLENBQUMsU0FBUyxDQUFDLENBQUM7SUFDcEQsQ0FBQztDQUNGO0FBR0QsTUFBTSxPQUFPLHFCQUFzQixTQUFRLE9BQU87SUFDaEQsWUFBbUIsU0FBaUIsRUFBUyxRQUFnQjtRQUMzRCxLQUFLLENBQUMsbUJBQW1CLFNBQVMsbUJBQW1CLFFBQVEsRUFBRSxDQUFDLENBQUM7UUFEaEQsY0FBUyxHQUFULFNBQVMsQ0FBUTtRQUFTLGFBQVEsR0FBUixRQUFRLENBQVE7UUFFM0QsTUFBTSxDQUFDLGNBQWMsQ0FBQyxJQUFJLEVBQUUsR0FBRyxDQUFDLE1BQU0sQ0FBQyxTQUFTLENBQUMsQ0FBQztJQUNwRCxDQUFDO0NBQ0YiLCJzb3VyY2VzQ29udGVudCI6WyJleHBvcnQgY2xhc3MgREJFcnJvciBleHRlbmRzIEVycm9yIHtcbiAgY29uc3RydWN0b3IobXNnOiBzdHJpbmcpIHtcbiAgICBzdXBlcihtc2cpO1xuICAgIE9iamVjdC5zZXRQcm90b3R5cGVPZih0aGlzLCBuZXcudGFyZ2V0LnByb3RvdHlwZSk7XG4gIH1cbn1cblxuXG5leHBvcnQgY2xhc3MgVW5pcXVlQ29uc3RyYWludEVycm9yIGV4dGVuZHMgREJFcnJvciB7XG4gIGNvbnN0cnVjdG9yKHB1YmxpYyBmaWVsZE5hbWU6IHN0cmluZywgcHVibGljIG9iamVjdElkOiBzdHJpbmcpIHtcbiAgICBzdXBlcihgVmFsdWUgZm9yIGZpZWxkICR7ZmllbGROYW1lfSBpcyBub24tdW5pcXVlOiAke29iamVjdElkfWApO1xuICAgIE9iamVjdC5zZXRQcm90b3R5cGVPZih0aGlzLCBuZXcudGFyZ2V0LnByb3RvdHlwZSk7XG4gIH1cbn1cbiJdfQ==
