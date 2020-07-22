@@ -190,7 +190,7 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
 
   } else if (db.status.isPushing || db.status.isPulling) {
     dbInitializationScreen = <NonIdealState
-      icon={db.status.isPushing ? "cloud-upload" : "cloud-download"}
+      icon={<Spinner />}
       title="Synchronizing data"
       description={db.status.isPushing ? "Sending changes" : "Fetching changes"}
     />
