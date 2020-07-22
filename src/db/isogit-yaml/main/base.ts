@@ -200,10 +200,8 @@ class Backend extends VersionedFilesystemBackend {
       if (forceReset === true) {
         log.warn("C/db/isogit-yaml: Git is being force reinitialized");
         doInitialize = true;
-      } else if (!(await this.git.isUsingRemoteURLs({
-          origin: this.opts.repoURL,
-          upstream: this.opts.upstreamRepoURL}))) {
-        log.warn("C/db/isogit-yaml: Git has mismatching remote URLs, reinitializing");
+      } else if (!(await this.git.isUsingRemoteURLs({ origin: this.opts.repoURL }))) {
+        log.warn("C/db/isogit-yaml: Git has mismatching remote URL(s), reinitializing");
         doInitialize = true;
       } else {
         log.info("C/db/isogit-yaml: Git is already initialized");

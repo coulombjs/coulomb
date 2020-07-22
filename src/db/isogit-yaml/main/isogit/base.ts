@@ -1,15 +1,15 @@
+import { Worker } from 'worker_threads';
 import * as https from 'https';
-import * as http from 'isomorphic-git/http/node';
+import fs from 'fs-extra';
 import * as path from 'path';
 import AsyncLock from 'async-lock';
 import * as git from 'isomorphic-git';
 import * as log from 'electron-log';
 
 import { GitStatus } from '../../base';
-import { GitAuthentication } from './types';
+import { GitAuthentication, WorkerMessage } from './types';
 
 
-const UPSTREAM_REMOTE = 'upstream';
 const MAIN_REMOTE = 'origin';
 
 
@@ -25,6 +25,9 @@ const INITIAL_STATUS: GitStatus = {
 } as const;
 
 
+const workerContents =  fs.readFileSync(path.resolve(__dirname, 'worker.js'), { encoding: 'utf8' });
+
+
 export class IsoGitWrapper {
 
   private auth: GitAuthentication = {};
@@ -34,6 +37,8 @@ export class IsoGitWrapper {
   private stagingLock: AsyncLock;
 
   private status: GitStatus;
+
+  private worker: Worker;
 
   constructor(
       private fs: any,
@@ -47,6 +52,23 @@ export class IsoGitWrapper {
 
     this.stagingLock = new AsyncLock({ timeout: 20000, maxPending: 2 });
 
+    if (this.corsProxy) {
+      log.warn("C/db/isogit: CORS proxy parameter is obsolete and will be removed.");
+    }
+    if (this.upstreamRepoUrl !== undefined) {
+      log.warn("C/db/isogit: the upstreamRepoUrl parameter is obsolete and will be removed.");
+    }
+
+    this.worker = new Worker(workerContents, { eval: true });
+
+    this.worker.on('exit', (code) => {
+      log.error("C/db/isogit: Worker exited!", code);
+    });
+
+    this.worker.on('error', (err) => {
+      log.error("C/db/isogit: Worker error", err);
+    });
+
     // Makes it easier to bind these to IPC events
     this.synchronize = this.synchronize.bind(this);
     this.resetFiles = this.resetFiles.bind(this);
@@ -55,6 +77,29 @@ export class IsoGitWrapper {
     this.auth.username = username;
 
     this.status = INITIAL_STATUS;
+  }
+
+  private async postMessage<T extends object>(
+      msg: WorkerMessage,
+      resolveOnResponse?: (resp: T) => boolean,
+      failOnResponse?: (resp: T) => boolean): Promise<T | undefined> {
+    this.worker.postMessage(msg);
+
+    if (!resolveOnResponse && !failOnResponse) {
+      return;
+
+    } else {
+      return new Promise((resolve, reject) => {
+        this.worker.once('message', (msg: T) => {
+          if (failOnResponse !== undefined && failOnResponse(msg)) {
+            reject(msg);
+          }
+          if (resolveOnResponse !== undefined && resolveOnResponse(msg)) {
+            resolve(msg);
+          }
+        });
+      });
+    }
   }
 
 
@@ -87,10 +132,9 @@ export class IsoGitWrapper {
     return hasGitDirectory;
   }
 
-  public async isUsingRemoteURLs(remoteUrls: { origin: string, upstream?: string }): Promise<boolean> {
+  public async isUsingRemoteURLs(remoteUrls: { origin: string }): Promise<boolean> {
     const origin = (await this.getOriginUrl() || '').trim();
-    const upstream = (await this.getUpstreamUrl() || '').trim();
-    return origin === remoteUrls.origin && (remoteUrls.upstream === undefined || upstream === remoteUrls.upstream);
+    return origin === remoteUrls.origin;
   }
 
   public needsPassword(): boolean {
@@ -121,32 +165,20 @@ export class IsoGitWrapper {
       log.verbose("C/db/isogit: Initialize: Cloning", this.repoUrl);
 
       try {
-        await git.clone({
-          http,
-          fs: this.fs,
-          dir: this.workDir,
+        const result = await this.postMessage<{ cloned: boolean, error?: any }>({
+          action: 'clone',
+          workDir: this.workDir,
+          repoURL: this.repoUrl,
+          auth: this.auth,
+        }, ((msg) => msg.cloned !== undefined), ((msg) => msg.error !== undefined));
 
-          // .git suffix is required: https://github.com/isomorphic-git/isomorphic-git/issues/1145#issuecomment-653819147
-          url: `${this.repoUrl}.git`,
-
-          ref: 'master',
-          singleBranch: true,
-          depth: 5,
-          corsProxy: this.corsProxy,
-          onAuth: () => this.auth,
-          onMessage: log.info,
-        });
-
-        if (this.upstreamRepoUrl !== undefined) {
-          log.debug("C/db/isogit: Initialize: Adding upstream remote", this.upstreamRepoUrl);
-          await git.addRemote({
-            fs: this.fs,
-            dir: this.workDir,
-            remote: UPSTREAM_REMOTE,
-            url: `${this.upstreamRepoUrl}.git`,
-          });
-        } else {
-          log.warn("C/db/isogit: Initialize: No upstream remote specified");
+        if (result?.cloned !== true) {
+          log.error("C/db/isogit: Failed to clone", result?.error);
+          if (result?.error) {
+            throw new result.error;
+          } else {
+            throw new Error("Failed to clone")
+          }
         }
 
       } catch (e) {
@@ -193,17 +225,22 @@ export class IsoGitWrapper {
   async pull() {
     log.verbose("C/db/isogit: Pulling master with fast-forward merge");
 
-    return await git.pull({
-      http,
-      fs: this.fs,
-      dir: this.workDir,
-      url: `${this.repoUrl}.git`,
-      singleBranch: true,
-      fastForwardOnly: true,
+    const result = await this.postMessage<{ pulled: true, error?: any }>({
+      action: 'pull',
+      workDir: this.workDir,
+      repoURL: this.repoUrl,
+      auth: this.auth,
       author: this.author,
-      onAuth: () => this.auth,
-      onMessage: log.info,
-    });
+    }, ((msg) => msg.pulled !== undefined), ((msg) => msg.error !== undefined));
+
+    if (result?.pulled !== true) {
+      log.error("C/db/isogit: Failed to pull", result?.error);
+      if (result?.error) {
+        throw result?.error;
+      } else {
+        throw new Error("Failed to pull");
+      }
+    }
   }
 
   async stage(pathSpecs: string[], removing = false) {
@@ -237,43 +274,24 @@ export class IsoGitWrapper {
     });
   }
 
-  async fetchRemote(): Promise<void> {
-    await git.fetch({
-      http,
-      fs: this.fs,
-      dir: this.workDir,
-      url: `${this.repoUrl}.git`,
-      remote: MAIN_REMOTE,
-      onAuth: () => this.auth,
-      onMessage: log.info,
-    });
-  }
-
-  async fetchUpstream(): Promise<void> {
-    await git.fetch({
-      http,
-      fs: this.fs,
-      dir: this.workDir,
-      url: `${this.repoUrl}.git`,
-      remote: UPSTREAM_REMOTE,
-      onAuth: () => this.auth,
-      onMessage: log.info,
-    });
-  }
-
-  async push(force = false) {
+  async push() {
     log.verbose("C/db/isogit: Pushing");
 
-    return await git.push({
-      http,
-      fs: this.fs,
-      dir: this.workDir,
-      url: `${this.repoUrl}.git`,
-      remote: MAIN_REMOTE,
-      force: force,
-      onAuth: () => this.auth,
-      onMessage: log.info,
-    });
+    const result = await this.postMessage<{ pushed: true, error?: any }>({
+      action: 'push',
+      workDir: this.workDir,
+      repoURL: this.repoUrl,
+      auth: this.auth,
+    }, ((msg) => msg.pushed !== undefined), ((msg) => msg.error !== undefined));
+
+    if (result?.pushed !== true) {
+      log.error("C/db/isogit: Failed to push", result?.error);
+      if (result?.error) {
+        throw result?.error;
+      } else {
+        throw new Error("Failed to push");
+      }
+    }
   }
 
   public async resetFiles(paths?: string[]) {
@@ -294,13 +312,6 @@ export class IsoGitWrapper {
       fs: this.fs,
       dir: this.workDir,
     })).find(r => r.remote === MAIN_REMOTE) || { url: null }).url;
-  }
-
-  async getUpstreamUrl(): Promise<string | null> {
-    return ((await git.listRemotes({
-      fs: this.fs,
-      dir: this.workDir,
-    })).find(r => r.remote === UPSTREAM_REMOTE) || { url: null }).url;
   }
 
   async listLocalCommits(): Promise<string[]> {
