@@ -66,7 +66,7 @@
   "husky": {
     "hooks": {
       "prepare-commit-msg": "exec < /dev/tty && git cz --hook || true",
-      "pre-push": "yarn compile"
+      "pre-push": "yarn"
     }
   }
 }
