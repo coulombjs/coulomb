@@ -1,4 +1,5 @@
 import * as https from 'https';
+import * as http from 'isomorphic-git/http/node';
 import * as path from 'path';
 import AsyncLock from 'async-lock';
 import * as git from 'isomorphic-git';
@@ -43,8 +44,6 @@ export class IsoGitWrapper {
       public workDir: string,
       private corsProxy: string | undefined,
       private statusReporter: (payload: GitStatus) => Promise<void>) {
-
-    git.plugins.set('fs', fs);
 
     this.stagingLock = new AsyncLock({ timeout: 20000, maxPending: 2 });
 
@@ -123,21 +122,28 @@ export class IsoGitWrapper {
 
       try {
         await git.clone({
+          http,
+          fs: this.fs,
           dir: this.workDir,
-          url: this.repoUrl,
+
+          // .git suffix is required: https://github.com/isomorphic-git/isomorphic-git/issues/1145#issuecomment-653819147
+          url: `${this.repoUrl}.git`,
+
           ref: 'master',
           singleBranch: true,
           depth: 5,
           corsProxy: this.corsProxy,
-          ...this.auth,
+          onAuth: () => this.auth,
+          onMessage: log.info,
         });
 
         if (this.upstreamRepoUrl !== undefined) {
           log.debug("C/db/isogit: Initialize: Adding upstream remote", this.upstreamRepoUrl);
           await git.addRemote({
+            fs: this.fs,
             dir: this.workDir,
             remote: UPSTREAM_REMOTE,
-            url: this.upstreamRepoUrl,
+            url: `${this.upstreamRepoUrl}.git`,
           });
         } else {
           log.warn("C/db/isogit: Initialize: No upstream remote specified");
@@ -165,18 +171,19 @@ export class IsoGitWrapper {
 
   async configSet(prop: string, val: string) {
     log.verbose("C/db/isogit: Set config");
-    await git.config({ dir: this.workDir, path: prop, value: val });
+    await git.setConfig({ fs: this.fs, dir: this.workDir, path: prop, value: val });
   }
 
   async configGet(prop: string): Promise<string> {
     log.verbose("C/db/isogit: Get config", prop);
-    return await git.config({ dir: this.workDir, path: prop });
+    return await git.getConfig({ fs: this.fs, dir: this.workDir, path: prop });
   }
 
   async readFileBlobAtCommit(relativeFilePath: string, commitHash: string): Promise<string> {
     /* Reads file contents at given path as of given commit. File contents must use UTF-8 encoding. */
 
     return (await git.readBlob({
+      fs: this.fs,
       dir: this.workDir,
       oid: commitHash,
       filepath: relativeFilePath,
@@ -187,15 +194,15 @@ export class IsoGitWrapper {
     log.verbose("C/db/isogit: Pulling master with fast-forward merge");
 
     return await git.pull({
+      http,
+      fs: this.fs,
       dir: this.workDir,
+      url: `${this.repoUrl}.git`,
       singleBranch: true,
       fastForwardOnly: true,
-
-      fast: true,
-      // NOTE: TypeScript is known to complain about the ``fast`` option.
-      // Seems like a problem with typings.
-
-      ...this.auth,
+      author: this.author,
+      onAuth: () => this.auth,
+      onMessage: log.info,
     });
   }
 
@@ -205,11 +212,13 @@ export class IsoGitWrapper {
     for (const pathSpec of pathSpecs) {
       if (removing !== true) {
         await git.add({
+          fs: this.fs,
           dir: this.workDir,
           filepath: pathSpec,
         });
       } else {
         await git.remove({
+          fs: this.fs,
           dir: this.workDir,
           filepath: pathSpec,
         });
@@ -221,6 +230,7 @@ export class IsoGitWrapper {
     log.verbose(`C/db/isogit: Committing with message ${msg}`);
 
     return await git.commit({
+      fs: this.fs,
       dir: this.workDir,
       message: msg,
       author: this.author,
@@ -228,21 +238,41 @@ export class IsoGitWrapper {
   }
 
   async fetchRemote(): Promise<void> {
-    await git.fetch({ dir: this.workDir, remote: MAIN_REMOTE, ...this.auth });
+    await git.fetch({
+      http,
+      fs: this.fs,
+      dir: this.workDir,
+      url: `${this.repoUrl}.git`,
+      remote: MAIN_REMOTE,
+      onAuth: () => this.auth,
+      onMessage: log.info,
+    });
   }
 
   async fetchUpstream(): Promise<void> {
-    await git.fetch({ dir: this.workDir, remote: UPSTREAM_REMOTE, ...this.auth });
+    await git.fetch({
+      http,
+      fs: this.fs,
+      dir: this.workDir,
+      url: `${this.repoUrl}.git`,
+      remote: UPSTREAM_REMOTE,
+      onAuth: () => this.auth,
+      onMessage: log.info,
+    });
   }
 
   async push(force = false) {
     log.verbose("C/db/isogit: Pushing");
 
     return await git.push({
+      http,
+      fs: this.fs,
       dir: this.workDir,
+      url: `${this.repoUrl}.git`,
       remote: MAIN_REMOTE,
       force: force,
-      ...this.auth,
+      onAuth: () => this.auth,
+      onMessage: log.info,
     });
   }
 
@@ -250,7 +280,8 @@ export class IsoGitWrapper {
     return await this.stagingLock.acquire('1', async () => {
       log.verbose("C/db/isogit: Force resetting files");
 
-      return await git.fastCheckout({
+      return await git.checkout({
+        fs: this.fs,
         dir: this.workDir,
         force: true,
         filepaths: paths || (await this.listChangedFiles()),
@@ -260,12 +291,14 @@ export class IsoGitWrapper {
 
   async getOriginUrl(): Promise<string | null> {
     return ((await git.listRemotes({
+      fs: this.fs,
       dir: this.workDir,
     })).find(r => r.remote === MAIN_REMOTE) || { url: null }).url;
   }
 
   async getUpstreamUrl(): Promise<string | null> {
     return ((await git.listRemotes({
+      fs: this.fs,
       dir: this.workDir,
     })).find(r => r.remote === UPSTREAM_REMOTE) || { url: null }).url;
   }
@@ -294,19 +327,26 @@ export class IsoGitWrapper {
 
     return await this.stagingLock.acquire('1', async () => {
       const latestRemoteCommit = await git.resolveRef({
+        fs: this.fs,
         dir: this.workDir,
         ref: `${MAIN_REMOTE}/master`,
       });
 
       const localCommits = await git.log({
+        fs: this.fs,
         dir: this.workDir,
         depth: 100,
       });
 
       var commits = [] as string[];
       for (const commit of localCommits) {
-        if (await git.isDescendent({ dir: this.workDir, oid: commit.oid, ancestor: latestRemoteCommit })) {
-          commits.push(commit.message);
+        if (await git.isDescendent({
+            fs: this.fs,
+            dir: this.workDir,
+            oid: commit.oid,
+            ancestor: latestRemoteCommit,
+          })) {
+          commits.push(commit.commit.message);
         } else {
           return commits;
         }
@@ -321,7 +361,7 @@ export class IsoGitWrapper {
 
     const FILE = 0, HEAD = 1, WORKDIR = 2;
 
-    return (await git.statusMatrix({ dir: this.workDir, filepaths: pathSpecs }))
+    return (await git.statusMatrix({ fs: this.fs, dir: this.workDir, filepaths: pathSpecs }))
       .filter(row => row[HEAD] !== row[WORKDIR])
       .map(row => row[FILE])
       .filter(filepath => !filepath.startsWith('..') && filepath !== ".DS_Store");
@@ -438,9 +478,10 @@ export class IsoGitWrapper {
         } catch (e) {
           log.error(e);
           await this.setStatus({
-            lastSynchronized: new Date(),
             isPulling: false,
             isPushing: false,
+            lastSynchronized: new Date(),
+            isOnline: false,
           });
           await this._handleGitError(e);
           return;
@@ -455,9 +496,9 @@ export class IsoGitWrapper {
           } catch (e) {
             log.error(e);
             await this.setStatus({
-              lastSynchronized: new Date(),
               isPulling: false,
               isPushing: false,
+              lastSynchronized: new Date(),
             });
             await this._handleGitError(e);
             return;
@@ -468,6 +509,7 @@ export class IsoGitWrapper {
 
         await this.setStatus({
           statusRelativeToLocal: 'updated',
+          isOnline: true,
           isMisconfigured: false,
           lastSynchronized: new Date(),
           needsPassword: false,
@@ -480,7 +522,7 @@ export class IsoGitWrapper {
 
   private async unstageAll() {
     log.verbose("C/db/isogit: Unstaging all changes");
-    await git.remove({ dir: this.workDir, filepath: '.' });
+    await git.remove({ fs: this.fs, dir: this.workDir, filepath: '.' });
   }
 
   private async _handleGitError(e: Error & { code: string }): Promise<void> {
