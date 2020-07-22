@@ -171,12 +171,12 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
       title="Initializing database"
     />
 
-  } else if (db.status.lastSynchronized !== null && db.status.isOnline === false) {
+  } else if (db.status.lastSynchronized !== null && db.status.isOnline !== true) {
     dbInitializationScreen = <NonIdealState
       icon="offline"
-      title="No connection"
+      title="Offline"
       description={<>
-        <p>Failed to connect to register data repository.</p>
+        <p>Unable to reach data repository. There may be connection issues.</p>
         <Button onClick={onDismiss} intent="primary">Synchronize later</Button>
       </>}
     />
