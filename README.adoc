@@ -42,6 +42,12 @@ It would probably look like this:
 ----
 ====
 
+== Contributing
+
+Coulomb uses Commitizen. To follow commit message conventions,
+it is suggested to use `git commit` CLI command, which would show
+interactive prompt and format commit message appropriately.
+
 == Release process
 
 Make sure you have `gitkpg` globally installed (`yarn global add gitpkg`).
