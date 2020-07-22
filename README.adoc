@@ -21,6 +21,27 @@ Add the following runtime requirement to your package.json
 "coulomb": "https://github.com/coulombjs/coulomb#coulomb-<current_version>-gitpkg",
 ----
 
+Add the following entry to the list `build.extraResources` in your package.json:
+
+[source]
+----
+{ "from": "./node_modules/coulomb/db/isogit-yaml/main/isogit/worker.js", "to": "isogit-worker.js" }
+----
+
+[NOTE]
+====
+If you are overriding `build.extraResources` for the first time
+and you are using `src/static` directory to bundle static assets
+during build, you may want to provide the default entry for static assets.
+
+It would probably look like this:
+
+[source]
+----
+{ "from": "./src/static", "to": "src/static" }
+----
+====
+
 == Release process
 
 Make sure you have `gitkpg` globally installed (`yarn global add gitpkg`).
