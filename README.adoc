@@ -3,6 +3,8 @@
 Coulomb is a framework for building cross-platform GUIs
 for structured data entry using TypeScript, React, and Electron.
 
+image:https://img.shields.io/badge/commitizen-friendly-brightgreen.svg[alt="Commitizen friendly",link="http://commitizen.github.io/cz-cli/"]
+
 == Demo
 
 To be added.
