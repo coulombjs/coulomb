@@ -1,18 +1,18 @@
 export interface GitAuthentication {
   /* Authentication as expected by isomorphic-git */
 
-  username?: string,
-  password?: string,
+  username?: string
+  password?: string
 
   // Unsupported currently
-  oauth2format?: 'github' | 'gitlab' | 'bitbucket',
-  token?: string,
+  oauth2format?: 'github' | 'gitlab' | 'bitbucket'
+  token?: string
 }
 
 
 export interface GitAuthor {
-  name?: string,
-  email?: string,
+  name?: string
+  email?: string
 }
 
 
@@ -44,4 +44,4 @@ export type WorkerMessage =
   CloneRequestMessage
   | PullRequestMessage
   | FetchRequestMessage
-  | PushRequestMessage
+  | PushRequestMessage;
