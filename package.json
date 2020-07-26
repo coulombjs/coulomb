@@ -37,7 +37,7 @@
     "commitizen": "^4.1.2",
     "css-loader": "^3.2.1",
     "cz-conventional-changelog": "3.2.0",
-    "electron": "^8.0.1",
+    "electron": "^8.2.4",
     "electron-log": "^4.0.6",
     "husky": "^4.2.5",
     "node-sass": "^4.12.0",
