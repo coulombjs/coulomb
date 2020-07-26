@@ -1,0 +1,63 @@
+= Coulomb
+
+Coulomb is a framework for building cross-platform GUIs
+for structured data entry using TypeScript, React, and Electron.
+
+image:https://img.shields.io/badge/commitizen-friendly-brightgreen.svg[alt="Commitizen friendly",link="http://commitizen.github.io/cz-cli/"]
+
+== Demo
+
+To be added.
+
+== Installation & usage
+
+Being in early alpha, the project is not distributed through NPM yet.
+
+Add the following runtime requirement to your package.json
+(for `current_version`, replace it with latest version per repository tags):
+
+[source]
+----
+"coulomb": "https://github.com/coulombjs/coulomb#coulomb-<current_version>-gitpkg",
+----
+
+Add the following entry to the list `build.extraResources` in your package.json:
+
+[source]
+----
+{ "from": "./node_modules/coulomb/db/isogit-yaml/main/isogit/worker.js", "to": "isogit-worker.js" }
+----
+
+[NOTE]
+====
+If you are overriding `build.extraResources` for the first time
+and you are using `src/static` directory to bundle static assets
+during build, you may want to provide the default entry for static assets.
+
+It would probably look like this:
+
+[source]
+----
+{ "from": "./src/static", "to": "src/static" }
+----
+====
+
+== Contributing
+
+Coulomb uses Commitizen. To follow commit message conventions,
+it is suggested to use `git commit` CLI command, which would show
+interactive prompt and format commit message appropriately.
+
+== Release process
+
+Make sure you have `gitkpg` globally installed (`yarn global add gitpkg`).
+
+From repository root:
+
+[source,sh]
+----
+# Edit dist/package-dist.json to increment version and (if changed) port dependencies from main packgage.json
+yarn
+cd dist
+gitpkg publish
+----
