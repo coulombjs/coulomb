@@ -1,6 +1,7 @@
 import * as log from 'electron-log';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import * as keytar from 'keytar';
 
 import { listen } from '../../../ipc/main';
 import { Setting, SettingManager } from '../../../settings/main';
@@ -54,6 +55,11 @@ class Backend extends VersionedFilesystemBackend {
   private fs: FilesystemWrapper<any>;
   private managers: (FilesystemManager & ModelManager<any, any, any>)[];
 
+  private keytarCredentialsKey: {
+    service: string
+    account: string
+  }
+
   constructor(
       private opts: BackendOptions,
       private reportBackendStatus: BackendStatusReporter) {
@@ -78,6 +84,11 @@ class Backend extends VersionedFilesystemBackend {
     );
 
     this.managers = [];
+
+    this.keytarCredentialsKey = {
+      service: `repo-${this.opts.repoURL}`,
+      account: this.opts.username,
+    };
 
     this.synchronize = this.synchronize.bind(this);
   }
@@ -213,6 +224,14 @@ class Backend extends VersionedFilesystemBackend {
 
     if (doInitialize) {
       await this.git.destroy();
+    }
+
+    const pwd = await keytar.getPassword(
+      this.keytarCredentialsKey.service,
+      this.keytarCredentialsKey.account);
+
+    if (pwd !== null && pwd.trim() !== '') {
+      await this.git.setPassword(pwd);
     }
 
     await this.synchronize();
@@ -394,7 +413,12 @@ class Backend extends VersionedFilesystemBackend {
       // WARNING: Don’t log password
       log.verbose("C/db/isogit-yaml: received git-set-password request");
 
-      this.git.setPassword(password);
+      await this.git.setPassword(password);
+
+      await keytar.setPassword(
+        this.keytarCredentialsKey.service,
+        this.keytarCredentialsKey.account,
+        password);
 
       return { success: true };
     });
