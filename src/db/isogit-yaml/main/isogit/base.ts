@@ -197,7 +197,7 @@ export class IsoGitWrapper {
 
   // Authentication
 
-  public setPassword(value: string | undefined) {
+  public async setPassword(value: string | undefined) {
     this.auth.password = value;
     this.setStatus({ needsPassword: false });
   }
@@ -558,8 +558,7 @@ export class IsoGitWrapper {
         e.code === 'MissingPasswordTokenError'
         || (e.code === 'HTTPError' && e.message.indexOf('Unauthorized') >= 0)) {
       log.warn("Password input required");
-      this.setPassword(undefined);
-      await this.setStatus({ needsPassword: true });
+      await this.setPassword(undefined);
     }
   }
 }
