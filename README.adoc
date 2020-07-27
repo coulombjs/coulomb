@@ -21,25 +21,92 @@ Add the following runtime requirement to "dependencies" in your package.json
 "coulomb": "https://github.com/coulombjs/coulomb#coulomb-<current_version>-gitpkg",
 ----
 
-Add the following entry to the list `build.extraResources` in your package.json:
+=== Peer dependencies
+
+==== `electron-webpack`
+
+Coulomb assumes that you are using Webpack, and `electron-webpack` to be specific.
+This is a requirement for bundling Node worker code, for example.
+
+We recommend to base your Electron application on top of `electron-builder`:
+see http://electron.build for more information.
+
+==== `electron-log`
+
+Coulomb uses `electron-log`, but it doesn’t bundle it. However, it assumes
+that the end Electron app will use it too, and relies on its availability.
+
+Add `electron-log` to your runtime dependencies:
 
 [source]
 ----
-{ "from": "./node_modules/coulomb/db/isogit-yaml/main/isogit/worker.js", "to": "isogit-worker.js" }
+yarn add electron-log
 ----
 
+==== React and Blueprint 3
+
+Currently, Coulomb provides some GUI components
+based on React and Palantir’s Blueprint 3.
+
+It is on our roadmap to make the library GUI-agnostic, but for now it is required
+for a Coulomb-based app to use those.
+
+Coulomb does not bundle them, so add them to your runtime dependencies:
+
+[source]
+----
+yarn add react-dom react @blueprintjs/core @blueprintjs/icons
+----
+
+=== Peer dependencies needed at build time
+
+Coulomb uses Node workers for Git operations that would otherwise
+block the UI, even though they run in main thread.
+
+To bundle dependencies (such as isomorphic-git) alongside worker code,
+it uses `threads` and requires your project to configure the corresponding
+Webpack plugin.
+
+The configuration is done in two steps:
+
+. Add the `threads-plugin` build-time dependency:
++
+[source]
+----
+yarn add --dev threads-plugin
+----
+
+. Configure Webpack for your main thread to use `threads-plugin`:
++
+[source]
+----
+module.exports = function (config) {
+  config.plugins.unshift(
+    new ThreadsPlugin({ target: 'electron-node-worker' })
+  );
+  // other configuration...
+}
+----
++
 [NOTE]
 ====
-If you are overriding `build.extraResources` for the first time
-and you are using `src/static` directory to bundle static assets
-during build, you may want to provide the default entry for static assets.
-
-It would probably look like this:
+If you have not added custom Webpack configuration for main thread,
+make sure you configure `electron-webpack` to use it by updating your package.json:
 
 [source]
 ----
-{ "from": "./src/static", "to": "src/static" }
+...
+"electronWebpack": {
+  ...
+  "main": {
+    ...
+    "webpackConfig": "main.webpack.js"
+  }
+},
 ----
+
+In this example, `ThreadsPlugin` instantiation described above
+will go in file named "main.webpack.js" in the same directory as your package.json.
 ====
 
 == Contributing
