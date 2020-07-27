@@ -13,7 +13,7 @@ To be added.
 
 Being in early alpha, the project is not distributed through NPM yet.
 
-Add the following runtime requirement to your package.json
+Add the following runtime requirement to "dependencies" in your package.json
 (for `current_version`, replace it with latest version per repository tags):
 
 [source]
