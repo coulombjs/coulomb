@@ -1,0 +1,1 @@
+{"version":3,"file":"models.js","sourceRoot":"","sources":["../../src/db/models.ts"],"names":[],"mappings":"","sourcesContent":["export type AnyIDType = string | number;\n/* Possible ID types. */\n\n\nexport type Model = Record<string, any>"]}
