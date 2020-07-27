@@ -174,7 +174,11 @@ async function createWindow(
     debug: boolean = false): Promise<BrowserWindow> {
 
   const window = new BrowserWindow({
-    webPreferences: { nodeIntegration: true, webSecurity: !debug },
+    webPreferences: {
+      nodeIntegration: true,
+      webSecurity: !debug,
+      enableRemoteModule: true,
+    },
     title: title,
     show: showWhileLoading === true,
     ...winParams
