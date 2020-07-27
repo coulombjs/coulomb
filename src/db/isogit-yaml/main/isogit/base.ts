@@ -1,13 +1,16 @@
-import { Worker } from 'worker_threads';
-import * as https from 'https';
-import fs from 'fs-extra';
 import * as path from 'path';
+import * as https from 'https';
+
+import { spawn, Worker, Thread } from 'threads';
+
 import AsyncLock from 'async-lock';
 import * as git from 'isomorphic-git';
 import * as log from 'electron-log';
 
 import { GitStatus } from '../../base';
-import { GitAuthentication, WorkerMessage } from './types';
+import { GitAuthentication } from './types';
+
+import { GitWorkerSpec, GitMethods } from './worker';
 
 
 const MAIN_REMOTE = 'origin';
@@ -25,13 +28,6 @@ const INITIAL_STATUS: GitStatus = {
 } as const;
 
 
-const workerFilePath = __dirname.endsWith('app.asar')
-  ? path.resolve(__dirname, '..', 'isogit-worker.js')
-  : path.resolve(__dirname, 'worker.js');
-
-const workerContents =  fs.readFileSync(workerFilePath, { encoding: 'utf8' });
-
-
 export class IsoGitWrapper {
 
   private auth: GitAuthentication = {};
@@ -42,7 +38,21 @@ export class IsoGitWrapper {
 
   private status: GitStatus;
 
-  private worker: Worker;
+  private worker: GitMethods | null = null;
+
+  private async getWorker(): Promise<GitMethods> {
+
+    if (!this.worker) {
+      const worker = await spawn<GitWorkerSpec>(new Worker('./worker'));
+      this.worker = worker;
+      Thread.events(worker).subscribe(evt => {
+        log.info("C/db/isogit: Worker event:", evt)
+        // TODO: Respawn on exit
+      });
+    }
+
+    return this.worker;
+  }
 
   constructor(
       private fs: any,
@@ -63,16 +73,6 @@ export class IsoGitWrapper {
       log.warn("C/db/isogit: the upstreamRepoUrl parameter is obsolete and will be removed.");
     }
 
-    this.worker = new Worker(workerContents, { eval: true });
-
-    this.worker.on('exit', (code) => {
-      log.error("C/db/isogit: Worker exited!", code);
-    });
-
-    this.worker.on('error', (err) => {
-      log.error("C/db/isogit: Worker error", err);
-    });
-
     // Makes it easier to bind these to IPC events
     this.synchronize = this.synchronize.bind(this);
     this.resetFiles = this.resetFiles.bind(this);
@@ -81,29 +81,6 @@ export class IsoGitWrapper {
     this.auth.username = username;
 
     this.status = INITIAL_STATUS;
-  }
-
-  private async postMessage<T extends object>(
-      msg: WorkerMessage,
-      resolveOnResponse?: (resp: T) => boolean,
-      failOnResponse?: (resp: T) => boolean): Promise<T | undefined> {
-    this.worker.postMessage(msg);
-
-    if (!resolveOnResponse && !failOnResponse) {
-      return;
-
-    } else {
-      return new Promise((resolve, reject) => {
-        this.worker.once('message', (msg: T) => {
-          if (failOnResponse !== undefined && failOnResponse(msg)) {
-            reject(msg);
-          }
-          if (resolveOnResponse !== undefined && resolveOnResponse(msg)) {
-            resolve(msg);
-          }
-        });
-      });
-    }
   }
 
 
@@ -168,28 +145,18 @@ export class IsoGitWrapper {
 
       log.verbose("C/db/isogit: Initialize: Cloning", this.repoUrl);
 
+      const worker = await this.getWorker();
       try {
-        const result = await this.postMessage<{ cloned: boolean, error?: any }>({
+        await worker.clone({
           action: 'clone',
           workDir: this.workDir,
           repoURL: this.repoUrl,
           auth: this.auth,
-        }, ((msg) => msg.cloned !== undefined), ((msg) => msg.error !== undefined));
-
-        if (result?.cloned !== true) {
-          log.error("C/db/isogit: Failed to clone", result?.error);
-          if (result?.error) {
-            throw new result.error;
-          } else {
-            throw new Error("Failed to clone")
-          }
-        }
-
+        });
       } catch (e) {
-        log.error("C/db/isogit: Error during initialization")
+        log.error("C/db/isogit: Error during initialization: Cannot clone", JSON.stringify(e))
         await this.fs.remove(this.workDir);
         await this._handleGitError(e);
-        throw e;
       }
     });
   }
@@ -229,21 +196,18 @@ export class IsoGitWrapper {
   async pull() {
     log.verbose("C/db/isogit: Pulling master with fast-forward merge");
 
-    const result = await this.postMessage<{ pulled: true, error?: any }>({
-      action: 'pull',
-      workDir: this.workDir,
-      repoURL: this.repoUrl,
-      auth: this.auth,
-      author: this.author,
-    }, ((msg) => msg.pulled !== undefined), ((msg) => msg.error !== undefined));
-
-    if (result?.pulled !== true) {
-      log.error("C/db/isogit: Failed to pull", result?.error);
-      if (result?.error) {
-        throw result?.error;
-      } else {
-        throw new Error("Failed to pull");
-      }
+    const worker = await this.getWorker();
+    try {
+      await worker.pull({
+        action: 'pull',
+        workDir: this.workDir,
+        repoURL: this.repoUrl,
+        auth: this.auth,
+        author: this.author,
+      });
+    } catch (e) {
+      log.error("C/db/isogit: Failed to pull", e);
+      throw e;
     }
   }
 
@@ -281,20 +245,17 @@ export class IsoGitWrapper {
   async push() {
     log.verbose("C/db/isogit: Pushing");
 
-    const result = await this.postMessage<{ pushed: true, error?: any }>({
-      action: 'push',
-      workDir: this.workDir,
-      repoURL: this.repoUrl,
-      auth: this.auth,
-    }, ((msg) => msg.pushed !== undefined), ((msg) => msg.error !== undefined));
-
-    if (result?.pushed !== true) {
-      log.error("C/db/isogit: Failed to push", result?.error);
-      if (result?.error) {
-        throw result?.error;
-      } else {
-        throw new Error("Failed to push");
-      }
+    const worker = await this.getWorker();
+    try {
+      await worker.push({
+        action: 'push',
+        workDir: this.workDir,
+        repoURL: this.repoUrl,
+        auth: this.auth,
+      });
+    } catch (e) {
+      log.error("C/db/isogit: Failed to push", e);
+      throw e;
     }
   }
 

@@ -51,6 +51,7 @@
     "js-yaml": "3.14.0",
     "keytar": "^6.0.1",
     "moment": "^2.24.0",
+    "threads": "^1.6.3"
   },
   "config": {
     "commitizen": {
