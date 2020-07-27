@@ -9,7 +9,17 @@ image:https://img.shields.io/badge/commitizen-friendly-brightgreen.svg[alt="Comm
 
 To be added.
 
-== Installation & usage
+== Installation
+
+[NOTE]
+====
+It is assumed that you are using `electron-builder` and `electron-webpack`.
+
+We recommend to base your Electron application on top of `electron-builder`:
+see http://electron.build for more information.
+====
+
+=== Coulomb
 
 Being in early alpha, the project is not distributed through NPM yet.
 
@@ -21,27 +31,7 @@ Add the following runtime requirement to "dependencies" in your package.json
 "coulomb": "https://github.com/coulombjs/coulomb#coulomb-<current_version>-gitpkg",
 ----
 
-=== Peer dependencies
-
-==== `electron-webpack`
-
-Coulomb assumes that you are using Webpack, and `electron-webpack` to be specific.
-This is a requirement for bundling Node worker code, for example.
-
-We recommend to base your Electron application on top of `electron-builder`:
-see http://electron.build for more information.
-
-==== `electron-log`
-
-Coulomb uses `electron-log`, but it doesn’t bundle it. However, it assumes
-that the end Electron app will use it too, and relies on its availability.
-
-Add `electron-log` to your runtime dependencies:
-
-[source]
-----
-yarn add electron-log
-----
+=== Peer dependencies at runtime
 
 ==== React and Blueprint 3
 
@@ -58,7 +48,19 @@ Coulomb does not bundle them, so add them to your runtime dependencies:
 yarn add react-dom react @blueprintjs/core @blueprintjs/icons
 ----
 
-=== Peer dependencies needed at build time
+==== `electron-log`
+
+Coulomb uses `electron-log`, but it doesn’t bundle it. However, it assumes
+that the end Electron app will use it too, and relies on its availability.
+
+Add `electron-log` to your runtime dependencies:
+
+[source]
+----
+yarn add electron-log
+----
+
+=== Peer dependencies at build time
 
 Coulomb uses Node workers for Git operations that would otherwise
 block the UI, even though they run in main thread.
