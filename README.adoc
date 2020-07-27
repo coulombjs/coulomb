@@ -109,6 +109,22 @@ In this example, `ThreadsPlugin` instantiation described above
 will go in file named "main.webpack.js" in the same directory as your package.json.
 ====
 
+=== Electron build configuration
+
+Add the following to your package.json file under "build":
+
+[source]
+----
+  ...
+  "build": {
+    ...
+    "asarUnpack": [
+      "dist/main/0.bundle.worker.js",
+      "dist/main/0.bundle.worker.js.map"
+    ]
+  }
+----
+
 == Contributing
 
 Coulomb uses Commitizen. To follow commit message conventions,
