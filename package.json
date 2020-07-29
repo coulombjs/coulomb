@@ -10,6 +10,10 @@
   "scripts": {
     "prepublish": "rm -rf dist; tsc; cp package-dist.json dist/package.json; rsync -avm --include='*.js' --include='*.scss' --include='*.css' --include='*.d.ts' -f 'hide,! */' ./src/ ./dist"
   },
+  "resolutions": {
+    "minimist": "1.2.3",
+    "kind-of": "6.0.3"
+  },
   "peerDependencies": {
     "@blueprintjs/core": "^3.28.2",
     "@blueprintjs/icons": "^3.18.1",
