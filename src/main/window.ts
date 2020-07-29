@@ -1,6 +1,6 @@
 import * as path from 'path'
 import { format as formatUrl } from 'url';
-import { BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron';
+import { app, protocol, BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron';
 
 import { AppConfig } from '../config/app';
 
@@ -13,6 +13,18 @@ export var windows: BrowserWindow[] = [];
 
 // Allows to locate window ID by label
 var windowsByTitle: { [title: string]: BrowserWindow } = {};
+
+
+app.whenReady().then(() => {
+  protocol.registerFileProtocol('file', (request, cb) => {
+    const components = request.url.replace('file:///', '').split('?', 2);
+    if (isDevelopment) {
+      cb(components.map(decodeURI)[0]);
+    } else {
+      cb(components.map(decodeURI).join('?'));
+    }
+  });
+});
 
 
 // Open new window, or focus if one with the same title already exists
