@@ -1,0 +1,1 @@
+{"version":3,"file":"types.js","sourceRoot":"","sources":["../../src/localizer/types.ts"],"names":[],"mappings":"","sourcesContent":["export interface SupportedLanguages { [id: string]: string }\nexport interface LangConfig { default: string, selected: string }\nexport interface Translatable<T> { [id: string]: T; }\n\n"]}

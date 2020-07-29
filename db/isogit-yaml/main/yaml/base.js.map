@@ -1,0 +1,1 @@
+{"version":3,"file":"base.js","sourceRoot":"","sources":["../../../../../src/db/isogit-yaml/main/yaml/base.ts"],"names":[],"mappings":"AAAA,MAAM,CAAC,MAAM,QAAQ,GAAG,OAAO,CAAC","sourcesContent":["export const YAML_EXT = '.yaml';\n\n\nexport interface YAML {\n  [prop: string]: YAML\n}"]}
