@@ -121,11 +121,20 @@ Add the following to your package.json file under "build":
   "build": {
     ...
     "asarUnpack": [
-      "dist/main/0.bundle.worker.js",
-      "dist/main/0.bundle.worker.js.map"
+      "node_modules/keytar/build/Release/*",
+      "node_modules/source-map/**/*",
+      "node_modules/source-map-support/**/*",
+      "node_modules/buffer-from/**/*",
+      "dist/main/*.worker.js*"
     ]
   }
 ----
+
+This ensures that worker’s dependencies are accessible at runtime
+within packaged app. If you get a "Cannot find module"
+JavaScript error alert during packaged app startup,
+especially if it’s being launched from within macOS’s Applications folder,
+check this setting.
 
 == Contributing
 
