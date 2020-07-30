@@ -130,7 +130,7 @@ Add the following to your package.json file under "build":
   }
 ----
 
-This ensures that worker’s dependencies are accessible at runtime
+This ensures that dependencies of Coulomb’s workers are accessible at runtime
 within packaged app. If you get a "Cannot find module"
 JavaScript error alert during packaged app startup,
 especially if it’s being launched from within macOS’s Applications folder,
