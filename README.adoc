@@ -21,15 +21,10 @@ see http://electron.build for more information.
 
 === Coulomb
 
-Being in early alpha, the project is not distributed through NPM yet.
-
-Add the following runtime requirement to "dependencies" in your package.json
-(for `current_version`, replace it with latest version per repository tags):
-
 [source]
-----
-"coulomb": "https://github.com/coulombjs/coulomb#coulomb-<current_version>-gitpkg",
-----
+--
+$ yarn add @riboseinc/coulomb
+--
 
 === Peer dependencies at runtime
 
