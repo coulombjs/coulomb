@@ -251,7 +251,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
 
       // Wrap the JSX into context provider components
       for (const [idx, ContextProvider] of ctxProviderComponents.entries()) {
-        log.verbose(  
+        log.verbose(
           `C/renderApp: Initializing context provider #${idx}`,
           ctxProviderComponents[idx],
           ctxProviderProps[idx]);
