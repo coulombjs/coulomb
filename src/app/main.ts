@@ -132,7 +132,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 
   // Prepare database backends & request configuration if needed
 
-  log.debug("C/initMain: DB: Reading backend config", config.databases);
+  log.debug("C/initMain: DB: Reading backend config");
 
   type BackendInfo = {
     dbName: string
@@ -142,7 +142,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
   let dbBackendClasses: BackendInfo[];
   dbBackendClasses = (await Promise.all(Object.entries(config.databases).map(
     async ([dbName, dbConf]) => {
-      log.debug("C/initMain: DB: Reading backend config", dbName, dbConf);
+      log.debug("C/initMain: DB: Reading backend config for", dbName);
 
       const DBBackendClass = dbConf.backend;
       if (DBBackendClass.registerSettingsForConfigurableOptions) {
