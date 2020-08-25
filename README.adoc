@@ -194,6 +194,8 @@ vim package-dist.json
 # Edit package-dist.json to increment version
 # Make sure to keep dependencies in check
 
+git tag -s <new version>
+
 yarn
 # Builds the package into ./dist
 
