@@ -186,14 +186,18 @@ interactive prompt and format commit message appropriately.
 
 == Release process
 
-Make sure you have `gitkpg` globally installed (`yarn global add gitpkg`).
-
 From repository root:
 
 [source,sh]
 ----
-# Edit dist/package-dist.json to increment version and (if changed) port dependencies from main packgage.json
+vim package-dist.json
+# Edit package-dist.json to increment version
+# Make sure to keep dependencies in check
+
 yarn
+# Builds the package into ./dist
+
 cd dist
-gitpkg publish
+
+npm publish
 ----
