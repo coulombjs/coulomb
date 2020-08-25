@@ -366,12 +366,14 @@ class Backend extends VersionedFilesystemBackend {
   }
 
   private async synchronize() {
-    await this.git.synchronize();
+    const { possiblyMutatedData } = await this.git.synchronize();
 
-    for (const mgr of this.managers) {
-      log.debug("C/initMain: Initializing manager");
-      await mgr.init();
-      await mgr.reportUpdatedData();
+    if (possiblyMutatedData === true) {
+      for (const mgr of this.managers) {
+        log.debug("C/initMain: Initializing manager");
+        await mgr.init();
+        await mgr.reportUpdatedData();
+      }
     }
   }
 

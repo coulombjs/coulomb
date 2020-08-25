@@ -394,7 +394,7 @@ export class IsoGitWrapper {
     this.pushPending = true;
   }
 
-  public async synchronize(): Promise<void> {
+  public async synchronize(): Promise<{ completed: boolean, possiblyMutatedData: boolean }> {
     /* Checks for connection, local changes and unpushed commits,
        tries to push and pull when there’s opportunity.
 
@@ -419,7 +419,8 @@ export class IsoGitWrapper {
       if (hasUncommittedChanges) {
         // Do not run pull if there are unstaged/uncommitted changes
         await this.setStatus({ hasLocalChanges: true });
-        return;
+        return { completed: false, possiblyMutatedData: false };
+
       } else {
         // If uncommitted changes weren’t detected, there may still be changed files
         // that are not managed by the backend (e.g., .DS_Store). Discard any stuff like that.
@@ -429,7 +430,7 @@ export class IsoGitWrapper {
 
     if (this.stagingLock.isBusy()) {
       log.verbose("C/db/isogit: Lock is busy, skipping sync");
-      return;
+      return { completed: false, possiblyMutatedData: false };
     }
 
     log.verbose("C/db/isogit: Queueing sync now, lock is not busy");
@@ -441,16 +442,21 @@ export class IsoGitWrapper {
 
       if (isOnline) {
         const needsPassword = this.needsPassword();
-        await this.setStatus({ needsPassword });
+
         if (needsPassword) {
-          return;
+          await this.setStatus({ needsPassword });
+          return { completed: false, possiblyMutatedData: false };
         }
 
-        await this.setStatus({ isOnline: true });
+        await this.setStatus({
+          needsPassword: false,
+          isOnline: true,
+          isPulling: true,
+        });
 
-        await this.setStatus({ isPulling: true });
         try {
           await this.pull();
+
         } catch (e) {
           log.error(e);
           await this.setStatus({
@@ -460,15 +466,17 @@ export class IsoGitWrapper {
             isOnline: false,
           });
           await this._handleGitError(e);
-          return;
+          return { completed: false, possiblyMutatedData: false };
         }
         //await this.setStatus({ isPulling: false });
 
         if (this.pushPending) {
           // Run push AFTER pull. May result in false-positive non-fast-forward rejection
           await this.setStatus({ isPushing: true });
+
           try {
             await this.push();
+
           } catch (e) {
             log.error(e);
             await this.setStatus({
@@ -477,7 +485,7 @@ export class IsoGitWrapper {
               lastSynchronized: new Date(),
             });
             await this._handleGitError(e);
-            return;
+            return { completed: false, possiblyMutatedData: true };
           }
           this.pushPending = false;
           //await this.setStatus({ isPushing: false });
@@ -492,6 +500,11 @@ export class IsoGitWrapper {
           isPushing: false,
           isPulling: false,
         });
+        return { completed: true, possiblyMutatedData: true };
+
+      } else {
+        await this.setStatus({ isOnline: false });
+        return { completed: false, possiblyMutatedData: false };
       }
     });
   }

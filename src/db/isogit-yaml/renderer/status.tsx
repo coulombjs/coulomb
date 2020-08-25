@@ -171,7 +171,7 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
       title="Initializing database"
     />
 
-  } else if (db.status.lastSynchronized !== null && db.status.isOnline !== true) {
+  } else if (db.status.isOnline !== true) {
     dbInitializationScreen = <NonIdealState
       icon="offline"
       title="Offline"
