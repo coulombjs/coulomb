@@ -38,7 +38,7 @@ export class IsoGitWrapper {
 
   private status: GitStatus;
 
-  private worker: GitMethods | null = null;
+  private worker: (Thread & GitMethods) | null = null;
 
   private async getWorker(): Promise<GitMethods> {
 
@@ -124,6 +124,12 @@ export class IsoGitWrapper {
 
   public getUsername(): string | undefined {
     return this.auth.username;
+  }
+
+  public async terminate() {
+    if (this.worker) {
+      await Thread.terminate(this.worker);
+    }
   }
 
   public async destroy() {

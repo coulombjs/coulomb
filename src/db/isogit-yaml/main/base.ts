@@ -237,6 +237,11 @@ class Backend extends VersionedFilesystemBackend {
     await this.synchronize();
   }
 
+  public async terminate() {
+    await super.terminate();
+    await this.git.terminate();
+  }
+
   public async read(objID: string, metaFields?: string[]) {
     return await this.fs.read(this.getRef(objID), metaFields) as object;
   }
