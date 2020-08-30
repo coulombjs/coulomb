@@ -67,7 +67,7 @@ export type ManagedDataChangeReporter<IDType> =
    `changedIDs` is intended to avoid unnecessary re-querying.
    An object referenced in it may have been created,
    modified or deleted.
-   
+
    Manager must omit `changedIDs` if it is not sure
    which exactly objects did change. */
 
