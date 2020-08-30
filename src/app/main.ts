@@ -303,6 +303,11 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     openWindow: _openWindow,
   };
 
+  app.on('window-all-closed', async () => {
+    if (!isMacOS) {
+      app.quit();
+    }
+  });
   return initializedMain;
 };
 
