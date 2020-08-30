@@ -305,10 +305,23 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 
   app.on('window-all-closed', async () => {
     if (!isMacOS) {
+      await terminateDBBackends(Object.values(databases));
       app.quit();
     }
   });
+
+  app.on('quit', async () => {
+    await terminateDBBackends(Object.values(databases));
+  });
+
   return initializedMain;
+};
+
+
+const terminateDBBackends = async (databases: Backend[]) => {
+  for (const backend of databases) {
+    await backend.terminate();
+  }
 };
 
 

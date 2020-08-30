@@ -13,6 +13,12 @@ export abstract class Backend<IDType = AnyIDType> {
      This may involve loading data from remote storage,
      thus initial authentication, etc. */
 
+  /* Cleans up any runtime resources, terminates threads. */
+  async terminate(): Promise<void> {}
+
+  /* Destroys all local data (and any unpushed changes). */
+  async destroy(): Promise<void> {}
+
   abstract describe(): Promise<BackendDescription<any>>
 
   // Following are data query & update methods.
