@@ -228,9 +228,7 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
         ...ctxProviderConfig.map(async (ctxp) => await ctxp.cls()),
       ]);
 
-      log.silly(
-        `C/renderApp: Resolved components`,
-        promisedComponents);
+      log.silly("C/renderApp: Resolved components");
 
       // Break down components into top-level window UI & context providers
       const TopWindowComponent = promisedComponents[0].default;
@@ -245,15 +243,12 @@ export const renderApp = <A extends AppConfig, C extends RendererConfig<A>>(conf
       // Write out top-level window component JSX
       var appMarkup = <TopWindowComponent query={searchParams} />;
 
-      log.debug(
-        `C/renderApp: Got context provider components`,
-        ctxProviderComponents);
+      log.debug("C/renderApp: Got context provider components");
 
       // Wrap the JSX into context provider components
       for (const [idx, ContextProvider] of ctxProviderComponents.entries()) {
         log.verbose(
           `C/renderApp: Initializing context provider #${idx}`,
-          ctxProviderComponents[idx],
           ctxProviderProps[idx]);
 
         appMarkup = (

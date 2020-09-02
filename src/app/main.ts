@@ -180,7 +180,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
       async ({ dbName, backendClass, backendOptions }) => {
         const DBBackendClass = backendClass;
 
-        log.verbose("C/initMain: DB: Completing backend options from", backendOptions);
+        log.verbose("C/initMain: DB: Completing backend options for", dbName);
 
         let options: any;
         if (DBBackendClass.completeOptionsFromSettings) {
@@ -192,7 +192,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
           options = backendOptions;
         }
 
-        log.verbose("C/initMain: DB: Initializing backend with options", backendOptions);
+        log.verbose("C/initMain: DB: Initializing backend", dbName);
 
         const backend = new DBBackendClass(
            options,
@@ -213,7 +213,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
 
   // Initialize model managers
 
-  log.debug("C/initMain: Initializing data model managers", config.managers)
+  log.debug("C/initMain: Initializing data model managers");
 
   type Managers = MainApp<any, C>["managers"];
   let managers: Managers;
@@ -222,7 +222,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     async ([modelName, managerConf]) => {
       const modelInfo = config.app.data[modelName];
 
-      log.verbose("C/initMain: Initializing model manager for DB", managerConf.dbName, databases);
+      log.verbose("C/initMain: Initializing model manager for DB", managerConf.dbName);
 
       const db = databases[managerConf.dbName];
       const ManagerClass = managerConf.options.cls;
