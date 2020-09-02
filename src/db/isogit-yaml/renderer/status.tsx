@@ -189,6 +189,13 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
       title="Initializing database"
     />
 
+  } else if (db.status.needsPassword) {
+    dbInitializationScreen = <NonIdealState
+      icon="key"
+      title="Password required"
+      description={<PasswordPrompt dbIPCPrefix={`db-${dbName}`} onConfirm={() => void 0} />}
+    />
+
   } else if (db.status.isOnline !== true) {
     dbInitializationScreen = <NonIdealState
       icon="offline"
@@ -197,13 +204,6 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
         <p>Unable to reach data repository. There may be connection issues.</p>
         <Button onClick={onDismiss} intent="primary">Synchronize later</Button>
       </>}
-    />
-
-  } else if (db.status.needsPassword) {
-    dbInitializationScreen = <NonIdealState
-      icon="key"
-      title="Password required"
-      description={<PasswordPrompt dbIPCPrefix={`db-${dbName}`} onConfirm={() => void 0} />}
     />
 
   } else if (db.status.isPushing || db.status.isPulling) {
