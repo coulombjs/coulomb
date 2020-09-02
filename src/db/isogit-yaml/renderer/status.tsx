@@ -27,6 +27,9 @@ switch (os.platform()) {
   case 'win32':
     NODE_KEYTAR_PASSWORD_STORAGE_METHOD = "Credential Vault";
     break;
+  default:
+    NODE_KEYTAR_PASSWORD_STORAGE_METHOD = "unknown method";
+    break;
 }
 
 
