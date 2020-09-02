@@ -1,7 +1,7 @@
 import os from 'os';
 import { shell } from 'electron';
 import * as log from 'electron-log';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   Button, IconName, FormGroup, InputGroup, Intent,
@@ -183,6 +183,16 @@ interface DBSyncScreenProps {
 export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db, onDismiss }) {
   let dbInitializationScreen: JSX.Element;
 
+  const [canDismiss, setCanDismiss] = useState(false);
+
+  useEffect(() => {
+    if (db.status.isOnline !== true || db.status.lastSynchronized !== null) {
+      setCanDismiss(false);
+      setTimeout((() => setCanDismiss(true)), 2000);
+    }
+  }, [JSON.stringify(db.status)]);
+
+
   if (db?.status === undefined) {
     dbInitializationScreen = <NonIdealState
       icon={<Spinner />}
@@ -201,8 +211,13 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
       icon="offline"
       title="Offline"
       description={<>
-        <p>Unable to reach data repository. There may be connection issues.</p>
-        <Button onClick={onDismiss} intent="primary">Synchronize later</Button>
+        <p>Data storage is offline.</p>
+        {canDismiss
+          ? <>
+              <p>There may be connection issues.</p>
+              <Button onClick={onDismiss} intent="primary">Synchronize later</Button>
+            </>
+          : null}
       </>}
     />
 
