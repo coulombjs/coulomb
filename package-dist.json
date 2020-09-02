@@ -1,6 +1,6 @@
 {
   "name": "@riboseinc/coulomb",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "main": "index.js",
   "types": "index.d.ts",
   "author": "Ribose Inc. <open.source@ribose.com>",
