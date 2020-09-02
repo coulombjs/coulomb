@@ -375,7 +375,7 @@ class Backend extends VersionedFilesystemBackend {
 
     if (possiblyMutatedData === true) {
       for (const mgr of this.managers) {
-        log.debug("C/initMain: Initializing manager");
+        log.debug("C/initMain: Running manager’s init()");
         await mgr.init();
         await mgr.reportUpdatedData();
       }
