@@ -11,7 +11,7 @@
     "prepublish": "rm -rf dist; tsc; cp package-dist.json dist/package.json; rsync -avm --include='*.js' --include='*.scss' --include='*.css' --include='*.d.ts' -f 'hide,! */' ./src/ ./dist"
   },
   "resolutions": {
-    "minimist": "1.2.3",
+    "minimist": "1.2.5",
     "elliptic": "6.5.3",
     "kind-of": "6.0.3"
   },
