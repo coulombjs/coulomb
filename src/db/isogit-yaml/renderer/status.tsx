@@ -1,3 +1,4 @@
+import os from 'os';
 import { shell } from 'electron';
 import * as log from 'electron-log';
 import React, { useState } from 'react';
@@ -13,6 +14,20 @@ import { DatabaseStatusComponentProps } from '../../../config/renderer';
 import { BackendDescription, BackendStatus } from '../base';
 
 import styles from './status.scss';
+
+
+let NODE_KEYTAR_PASSWORD_STORAGE_METHOD: string
+switch (os.platform()) {
+  case 'darwin':
+    NODE_KEYTAR_PASSWORD_STORAGE_METHOD = "Keychain";
+    break;
+  case 'linux':
+    NODE_KEYTAR_PASSWORD_STORAGE_METHOD = "Secret Service API/libsecret";
+    break;
+  case 'win32':
+    NODE_KEYTAR_PASSWORD_STORAGE_METHOD = "Credential Vault";
+    break;
+}
 
 
 const BackendDetails: React.FC<DatabaseStatusComponentProps<BackendDescription, BackendStatus>> =
@@ -134,8 +149,8 @@ function ({ dbIPCPrefix, onConfirm }) {
 
   return <div className={styles.passwordPrompt}>
     <FormGroup
-        label="Please enter repository password:"
-        helperText="The password will be kept in memory and not stored to disk.">
+        label="Please enter your Git password to access this repository:"
+        helperText={`Password will be stored using your operating system’s ${NODE_KEYTAR_PASSWORD_STORAGE_METHOD}.`}>
       <InputGroup
         type="password"
         value={value}
