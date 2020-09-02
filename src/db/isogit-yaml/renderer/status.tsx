@@ -280,7 +280,7 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
   } else {
     dbInitializationScreen = <NonIdealState
       icon="warning-sign"
-      title="Ready"
+      title="Ready, but something went wrong"
       description={<>
         <p>Last synchronized: N/A</p>
         <Button onClick={onDismiss} intent="primary">Synchronize later</Button>
