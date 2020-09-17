@@ -31,7 +31,7 @@ interface DatabaseConfig {
 
   // If not all options are supplied in configuration in code,
   // the missing ones will be required from the user via initial configuration window.
-  options: any
+  options: Record<string, any>
 }
 
 
