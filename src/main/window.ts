@@ -92,8 +92,12 @@ export const openWindow: WindowOpener = async ({
     throw new Error("Either component or url must be given to openWindow()");
   }
 
-  if (menuTemplate && !isMacOS) {
-    window.setMenu(Menu.buildFromTemplate(menuTemplate));
+  if (!isMacOS) {
+    if (menuTemplate) {
+      window.setMenu(Menu.buildFromTemplate(menuTemplate));
+    } else {
+      window.setMenu(null);
+    }
   }
 
   windows.push(window);
