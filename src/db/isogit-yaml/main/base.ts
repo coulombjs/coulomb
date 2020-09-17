@@ -239,7 +239,12 @@ class Backend extends VersionedFilesystemBackend {
 
   public async terminate() {
     await super.terminate();
-    await this.git.terminate();
+
+    try {
+      await this.git.terminate();
+    } catch (e) {
+      log.error("C/db/isogit-yaml: Error terminating Git backend")
+    }
   }
 
   public async read(objID: string, metaFields?: string[]) {
