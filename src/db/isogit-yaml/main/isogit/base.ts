@@ -536,7 +536,8 @@ export class IsoGitWrapper {
       log.warn("Possible connection issues");
     } else if (
         e.code === 'MissingPasswordTokenError'
-        || (e.code === 'HTTPError' && e.message.indexOf('Unauthorized') >= 0)) {
+        || (e.code === 'HTTPError' && e.message.indexOf('Unauthorized') >= 0)
+        || e.message.indexOf('Authorization Required')) {
       log.warn("Password input required");
       await this.setPassword(undefined);
     }
