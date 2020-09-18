@@ -85,9 +85,21 @@ export const openWindow: WindowOpener = async ({
 
   if (component) {
     const params = `c=${component}&${componentParams ? componentParams : ''}`;
-    window = await createWindowForLocalComponent(title, params, _winParams, showWhileLoading === true, config.forceDevelopmentMode || false);
+    window = await createWindowForLocalComponent(
+      title,
+      params,
+      _winParams,
+      showWhileLoading === true,
+      config.forceDevelopmentMode || false);
+
   } else if (url) {
-    window = await createWindow(title, url, _winParams, showWhileLoading === true, ignoreCache);
+    window = await createWindow(
+      title,
+      url,
+      _winParams,
+      showWhileLoading === true,
+      ignoreCache);
+
   } else {
     throw new Error("Either component or url must be given to openWindow()");
   }
