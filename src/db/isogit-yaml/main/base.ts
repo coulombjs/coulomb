@@ -436,6 +436,17 @@ class Backend extends VersionedFilesystemBackend {
     });
 
     listen<{}, { success: true }>
+    (`${prefix}-git-clear-password`, async () => {
+      await this.git.setPassword(undefined);
+
+      await keytar.deletePassword(
+        this.keytarCredentialsKey.service,
+        this.keytarCredentialsKey.account);
+
+      return { success: true };
+    });
+
+    listen<{}, { success: true }>
     (`${prefix}-git-request-push`, async () => {
       this.git.requestPush();
       return { success: true };
