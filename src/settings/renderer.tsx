@@ -58,7 +58,7 @@ export function useSetting<T>(name: string, initialValue: T): SettingHook<T> {
 }
 
 
-const SettingsScreen: React.FC<WindowComponentProps> = function ({ query }) {
+export const SettingsScreen: React.FC<{ requiredSettingIDs: string[] }> = function ({ requiredSettingIDs }) {
   const panes = useIPCValue('settingPaneList', { panes: [] as Pane[] }).
     value.panes;
   const settings = useIPCValue('settingList', { settings: [] as Setting<any>[] }).
@@ -71,15 +71,6 @@ const SettingsScreen: React.FC<WindowComponentProps> = function ({ query }) {
       selectTabID(panes[0].id);
     }
   }, [panes.length]);
-
-  // Determine whether user was requested to supply specific settings
-  let requiredSettingIDs: string[];
-  const maybeRequiredSettings = query.get('requiredSettings')
-  if (maybeRequiredSettings) {
-    requiredSettingIDs = maybeRequiredSettings.split(',');
-  } else {
-    requiredSettingIDs = [];
-  }
 
   let settingWidgetGroup: JSX.Element;
 
@@ -109,8 +100,23 @@ const SettingsScreen: React.FC<WindowComponentProps> = function ({ query }) {
     );
   }
 
-  return <div className={styles.base}>{settingWidgetGroup}</div>;
+  return settingWidgetGroup;
 };
+
+
+export function getRequiredSettings(fromQuery: WindowComponentProps["query"]): string[] {
+  // Determines whether user was requested to supply specific settings
+
+  let requiredSettingIDs: string[];
+  const maybeRequiredSettings = fromQuery.get('requiredSettings')
+  if (maybeRequiredSettings) {
+    requiredSettingIDs = maybeRequiredSettings.split(',');
+  } else {
+    requiredSettingIDs = [];
+  }
+
+  return requiredSettingIDs;
+}
 
 
 const SettingInputList: React.FC<{ settings: Setting<any>[] }> = function ({ settings }) {
@@ -163,4 +169,13 @@ const SettingInput: React.FC<SettingsInputProps> = function ({ label, ipcSetting
 };
 
 
-export default SettingsScreen;
+const SettingsWindow: React.FC<WindowComponentProps> = function ({ query }) {
+  return (
+    <div className={styles.base}>
+      <SettingsScreen requiredSettingIDs={getRequiredSettings(query)} />
+    </div>
+  );
+};
+
+
+export default SettingsWindow;
