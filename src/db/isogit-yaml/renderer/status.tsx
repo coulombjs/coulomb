@@ -199,8 +199,9 @@ interface DBSyncScreenProps {
   dbName: string
   db: BackendDescription
   onDismiss: () => void
+  settingsWindowID?: string
 }
-export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db, onDismiss }) {
+export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db, onDismiss, settingsWindowID }) {
   let dbInitializationScreen: JSX.Element;
 
   const [canDismiss, setCanDismiss] = useState(false);
@@ -211,6 +212,11 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
       setTimeout((() => setCanDismiss(true)), 2000);
     }
   }, [JSON.stringify(db.status)]);
+
+
+  function handleOpenSettings() {
+    callIPC('open-predefined-window', { id: settingsWindowID });
+  }
 
 
   if (db?.status === undefined) {
@@ -323,7 +329,20 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
     />
 
   }
-  return dbInitializationScreen;
+  return (
+    <>
+      {dbInitializationScreen}
+
+      {settingsWindowID
+        ? <Button
+              onClick={handleOpenSettings}
+              icon="settings"
+              style={{ position: 'absolute', top: 20, right: 20 }}>
+            Open settings
+          </Button>
+        : null}
+    </>
+  );
 };
 
 
