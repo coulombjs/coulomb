@@ -237,10 +237,9 @@ export const DBSyncScreen: React.FC<DBSyncScreenProps> = function ({ dbName, db,
       icon="offline"
       title="Offline"
       description={<>
-        <p>Data storage is offline.</p>
+        <p>Please wait a moment…</p>
         {canDismiss
           ? <>
-              <p>There may be connection issues.</p>
               <Button onClick={onDismiss} intent="primary">Synchronize later</Button>
             </>
           : null}
