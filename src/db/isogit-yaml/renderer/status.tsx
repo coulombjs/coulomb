@@ -150,10 +150,30 @@ function ({ dbIPCPrefix, onConfirm }) {
     onConfirm();
   }
 
+  function handleViewPATInfo() {
+    require('electron').shell.openExternal('https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token');
+  }
+
   return <div className={styles.passwordPrompt}>
     <FormGroup
         label="Please enter your Git password to access this repository:"
-        helperText={`Password will be stored using your operating system’s ${NODE_KEYTAR_PASSWORD_STORAGE_METHOD}.`}>
+        helperText={<>
+          <p>
+            Password will be stored using your operating system’s {NODE_KEYTAR_PASSWORD_STORAGE_METHOD}.
+          </p>
+          <Callout intent="primary" title="Note for GitHub users" style={{ textAlign: 'left' }}>
+            <p>
+              If you are using GitHub and this screen does not accept
+              your GitHub account password,
+              you may need to create a Personal Access Token (PAT)
+              and provide it here as a password.
+            </p>
+            <p>
+              Please follow these instructions: <a onClick={handleViewPATInfo}>Creating a personal access token</a>.
+              Please make sure to tick the “repo” scope checkbox when creating your PAT.
+            </p>
+          </Callout>
+        </>}>
       <InputGroup
         type="password"
         value={value}
