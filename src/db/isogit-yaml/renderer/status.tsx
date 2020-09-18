@@ -145,7 +145,7 @@ function ({ dbIPCPrefix, onConfirm }) {
   const [value, setValue] = useState('');
 
   async function handlePasswordConfirm() {
-    await callIPC<{ password: string }, { success: true }>(`${dbIPCPrefix}-git-set-password`, { password: value });
+    await callIPC<{ password: string }, { success: true }>(`${dbIPCPrefix}-git-set-password`, { password: value.trim() });
     await callIPC(`${dbIPCPrefix}-git-trigger-sync`);
     onConfirm();
   }
