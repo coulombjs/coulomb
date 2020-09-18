@@ -1,6 +1,12 @@
 import * as path from 'path'
 import { format as formatUrl } from 'url';
-import { app, protocol, BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron';
+import {
+  app,
+  protocol,
+  BrowserWindow,
+  Menu,
+  MenuItemConstructorOptions,
+} from 'electron';
 
 import { AppConfig } from '../config/app';
 
