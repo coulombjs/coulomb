@@ -50,6 +50,7 @@ const gitWorkerMethods: GitWorkerSpec = {
           singleBranch: true,
           depth: 5,
           onAuth: () => msg.auth,
+          onAuthFailure: () => ({ cancel: true }),
         });
       } catch (e) {
         //log.error(`C/db/isogit/worker: Error cloning repository`, e);
@@ -71,6 +72,7 @@ const gitWorkerMethods: GitWorkerSpec = {
           fastForwardOnly: true,
           author: msg.author,
           onAuth: () => msg.auth,
+          onAuthFailure: () => ({ cancel: true }),
         });
       } catch (e) {
         //log.error(`C/db/isogit/worker: Error pulling from repository`, e);
@@ -89,6 +91,7 @@ const gitWorkerMethods: GitWorkerSpec = {
           dir: msg.workDir,
           url: `${msg.repoURL}.git`,
           onAuth: () => msg.auth,
+          onAuthFailure: () => ({ cancel: true }),
         });
       } catch (e) {
         //log.error(`C/db/isogit/worker: Error pushing to repository`, e);

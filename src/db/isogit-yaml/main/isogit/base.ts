@@ -1,10 +1,10 @@
 import * as path from 'path';
-import * as https from 'https';
+// import * as https from 'https';
 
 import { spawn, Worker, Thread } from 'threads';
 
 import AsyncLock from 'async-lock';
-import * as git from 'isomorphic-git';
+import git, { Errors } from 'isomorphic-git';
 import * as log from 'electron-log';
 
 import { GitStatus } from '../../base';
@@ -172,7 +172,7 @@ export class IsoGitWrapper {
 
   public async setPassword(value: string | undefined) {
     this.auth.password = value;
-    this.setStatus({ needsPassword: false });
+    this.setStatus({ needsPassword: (value || '').trim() === '' });
   }
 
 
@@ -416,15 +416,19 @@ export class IsoGitWrapper {
 
       await this.setStatus({
         ...INITIAL_STATUS,
+
         hasLocalChanges: false,
         lastSynchronized: this.status.lastSynchronized,
+
+        isOnline: true,
+        isPulling: true,
       });
 
       const hasUncommittedChanges = await this.checkUncommitted();
 
       if (hasUncommittedChanges) {
         // Do not run pull if there are unstaged/uncommitted changes
-        await this.setStatus({ hasLocalChanges: true });
+        await this.setStatus({ isPulling: false, hasLocalChanges: true });
         return { completed: false, possiblyMutatedData: false };
 
       } else {
@@ -436,6 +440,7 @@ export class IsoGitWrapper {
 
     if (this.stagingLock.isBusy()) {
       log.verbose("C/db/isogit: Lock is busy, skipping sync");
+      await this.setStatus({ isPulling: false });
       return { completed: false, possiblyMutatedData: false };
     }
 
@@ -444,24 +449,41 @@ export class IsoGitWrapper {
     return await this.stagingLock.acquire('1', async () => {
       log.verbose("C/db/isogit: Starting sync");
 
-      const isOnline = (await checkOnlineStatus()) === true;
+      const needsPassword = this.needsPassword();
 
-      if (isOnline) {
-        const needsPassword = this.needsPassword();
+      if (needsPassword) {
+        await this.setStatus({ needsPassword });
+        return { completed: false, possiblyMutatedData: false };
+      }
 
-        if (needsPassword) {
-          await this.setStatus({ needsPassword });
-          return { completed: false, possiblyMutatedData: false };
-        }
+      await this.setStatus({
+        needsPassword: false,
+        isOnline: true,
+        isPulling: true,
+      });
 
+      try {
+        await this.pull();
+
+      } catch (e) {
+        log.error(e);
         await this.setStatus({
-          needsPassword: false,
-          isOnline: true,
-          isPulling: true,
+          isPulling: false,
+          isPushing: false,
+          lastSynchronized: new Date(),
+          isOnline: false,
         });
+        await this._handleGitError(e);
+        return { completed: false, possiblyMutatedData: false };
+      }
+      //await this.setStatus({ isPulling: false });
+
+      if (this.pushPending) {
+        // Run push AFTER pull. May result in false-positive non-fast-forward rejection
+        await this.setStatus({ isPushing: true });
 
         try {
-          await this.pull();
+          await this.push();
 
         } catch (e) {
           log.error(e);
@@ -469,49 +491,25 @@ export class IsoGitWrapper {
             isPulling: false,
             isPushing: false,
             lastSynchronized: new Date(),
-            isOnline: false,
           });
           await this._handleGitError(e);
-          return { completed: false, possiblyMutatedData: false };
+          return { completed: false, possiblyMutatedData: true };
         }
-        //await this.setStatus({ isPulling: false });
-
-        if (this.pushPending) {
-          // Run push AFTER pull. May result in false-positive non-fast-forward rejection
-          await this.setStatus({ isPushing: true });
-
-          try {
-            await this.push();
-
-          } catch (e) {
-            log.error(e);
-            await this.setStatus({
-              isPulling: false,
-              isPushing: false,
-              lastSynchronized: new Date(),
-            });
-            await this._handleGitError(e);
-            return { completed: false, possiblyMutatedData: true };
-          }
-          this.pushPending = false;
-          //await this.setStatus({ isPushing: false });
-        }
-
-        await this.setStatus({
-          statusRelativeToLocal: 'updated',
-          isOnline: true,
-          isMisconfigured: false,
-          lastSynchronized: new Date(),
-          needsPassword: false,
-          isPushing: false,
-          isPulling: false,
-        });
-        return { completed: true, possiblyMutatedData: true };
-
-      } else {
-        await this.setStatus({ isOnline: false });
-        return { completed: false, possiblyMutatedData: false };
+        this.pushPending = false;
+        //await this.setStatus({ isPushing: false });
       }
+
+      await this.setStatus({
+        statusRelativeToLocal: 'updated',
+        isOnline: true,
+        isMisconfigured: false,
+        lastSynchronized: new Date(),
+        needsPassword: false,
+        isPushing: false,
+        isPulling: false,
+      });
+
+      return { completed: true, possiblyMutatedData: true };
     });
   }
 
@@ -520,146 +518,67 @@ export class IsoGitWrapper {
     await git.remove({ fs: this.fs, dir: this.workDir, filepath: '.' });
   }
 
-  private async _handleGitError(e: Error & { code: string }): Promise<void> {
-    log.debug("Handling Git error", e.code, e);
+  private async _handleGitError(err: { name: string, message: string }): Promise<void> {
+    const e: string = err.name;
 
-    if (e.code === 'FastForwardFail' || e.code === 'MergeNotSupportedFail') {
+    log.debug("Handling Git error", err);
+
+    if (e.indexOf('FastForwardError') >= 0 || e.indexOf('MergeNotSupportedError') >= 0) {
       // NOTE: There’s also PushRejectedNonFastForward, but it seems to be thrown
       // for unrelated cases during push (false positive).
       // Because of that false positive, we ignore that error and instead do pull first,
       // catching actual fast-forward fails on that step before push.
       await this.setStatus({ statusRelativeToLocal: 'diverged' });
-    } else if (['MissingUsernameError', 'MissingAuthorError', 'MissingCommitterError'].indexOf(e.code) >= 0) {
+    } else if (e.indexOf('MissingNameError') >= 0) {
       await this.setStatus({ isMisconfigured: true });
-    } else if (e.code === 'EHOSTDOWN') {
+    } else if (e.indexOf('EHOSTDOWN') >= 0) {
       await this.setStatus({ isOnline: false });
       log.warn("Possible connection issues");
-    } else if (
-        e.code === 'MissingPasswordTokenError'
-        || (e.code === 'HTTPError' && e.message.indexOf('Unauthorized') >= 0)
-        || e.message.indexOf('Authorization Required')) {
-      log.warn("Password input required");
+    } else if (e.indexOf('UserCanceledError') >= 0) {
+      log.warn("Probably password input required");
       await this.setPassword(undefined);
     }
   }
 }
 
 
-async function checkOnlineStatus(timeout = 4500): Promise<boolean> {
-  // TODO: Move to general utility functions
-  return new Promise((resolve) => {
-    log.debug("C/db/isogit: Connection test: Starting");
+// async function checkOnlineStatus(timeout = 4500): Promise<boolean> {
+//   // TODO: Move to general utility functions
+//   return new Promise((resolve) => {
+//     log.debug("C/db/isogit: Connection test: Starting");
+//
+//     const req = https.get('https://github.com/', { timeout }, reportOnline);
+//
+//     req.on('error', () => req.abort());
+//     req.on('response', reportOnline);
+//     req.on('connect', reportOnline);
+//     req.on('continue', reportOnline);
+//     req.on('upgrade', reportOnline);
+//     req.on('timeout', reportOffline);
+//
+//     req.end();
+//
+//     const checkTimeout = setTimeout(reportOffline, timeout);
+//
+//     function reportOffline() {
+//       log.warn("C/db/isogit: Connection test: Report offline");
+//       try { req.abort(); } catch (e) {}
+//       clearTimeout(checkTimeout);
+//       resolve(false);
+//     }
+//     function reportOnline() {
+//       log.info("C/db/isogit: Connection test: Report online");
+//       try { req.abort(); } catch (e) {}
+//       clearTimeout(checkTimeout);
+//       resolve(true);
+//     }
+//   });
+// }
 
-    const req = https.get('https://github.com/', { timeout }, reportOnline);
-
-    req.on('error', () => req.abort());
-    req.on('response', reportOnline);
-    req.on('connect', reportOnline);
-    req.on('continue', reportOnline);
-    req.on('upgrade', reportOnline);
-    req.on('timeout', reportOffline);
-
-    req.end();
-
-    const checkTimeout = setTimeout(reportOffline, timeout);
-
-    function reportOffline() {
-      log.warn("C/db/isogit: Connection test: Report offline");
-      try { req.abort(); } catch (e) {}
-      clearTimeout(checkTimeout);
-      resolve(false);
-    }
-    function reportOnline() {
-      log.info("C/db/isogit: Connection test: Report online");
-      try { req.abort(); } catch (e) {}
-      clearTimeout(checkTimeout);
-      resolve(true);
-    }
-  });
-}
-
-
-// TODO: Temporary workaround since isomorphic-git doesn’t seem to export its GitError class
-// in any way available to TS, so we can’t use instanceof :(
 
 export function isGitError(e: Error & { code: string }) {
   if (!e.code) {
     return false;
   }
-  return Object.keys(IsomorphicGitErrorCodes).indexOf(e.code) >= 0;
+  return Object.values(Errors).filter(gitE => gitE?.code === e.code) !== undefined;
 }
-
-const IsomorphicGitErrorCodes = {
-  FileReadError: `FileReadError`,
-  MissingRequiredParameterError: `MissingRequiredParameterError`,
-  InvalidRefNameError: `InvalidRefNameError`,
-  InvalidParameterCombinationError: `InvalidParameterCombinationError`,
-  RefExistsError: `RefExistsError`,
-  RefNotExistsError: `RefNotExistsError`,
-  BranchDeleteError: `BranchDeleteError`,
-  NoHeadCommitError: `NoHeadCommitError`,
-  CommitNotFetchedError: `CommitNotFetchedError`,
-  ObjectTypeUnknownFail: `ObjectTypeUnknownFail`,
-  ObjectTypeAssertionFail: `ObjectTypeAssertionFail`,
-  ObjectTypeAssertionInTreeFail: `ObjectTypeAssertionInTreeFail`,
-  ObjectTypeAssertionInRefFail: `ObjectTypeAssertionInRefFail`,
-  ObjectTypeAssertionInPathFail: `ObjectTypeAssertionInPathFail`,
-  MissingAuthorError: `MissingAuthorError`,
-  MissingCommitterError: `MissingCommitterError`,
-  MissingTaggerError: `MissingTaggerError`,
-  GitRootNotFoundError: `GitRootNotFoundError`,
-  UnparseableServerResponseFail: `UnparseableServerResponseFail`,
-  InvalidDepthParameterError: `InvalidDepthParameterError`,
-  RemoteDoesNotSupportShallowFail: `RemoteDoesNotSupportShallowFail`,
-  RemoteDoesNotSupportDeepenSinceFail: `RemoteDoesNotSupportDeepenSinceFail`,
-  RemoteDoesNotSupportDeepenNotFail: `RemoteDoesNotSupportDeepenNotFail`,
-  RemoteDoesNotSupportDeepenRelativeFail: `RemoteDoesNotSupportDeepenRelativeFail`,
-  RemoteDoesNotSupportSmartHTTP: `RemoteDoesNotSupportSmartHTTP`,
-  CorruptShallowOidFail: `CorruptShallowOidFail`,
-  FastForwardFail: `FastForwardFail`,
-  MergeNotSupportedFail: `MergeNotSupportedFail`,
-  DirectorySeparatorsError: `DirectorySeparatorsError`,
-  ResolveTreeError: `ResolveTreeError`,
-  ResolveCommitError: `ResolveCommitError`,
-  DirectoryIsAFileError: `DirectoryIsAFileError`,
-  TreeOrBlobNotFoundError: `TreeOrBlobNotFoundError`,
-  NotImplementedFail: `NotImplementedFail`,
-  ReadObjectFail: `ReadObjectFail`,
-  NotAnOidFail: `NotAnOidFail`,
-  NoRefspecConfiguredError: `NoRefspecConfiguredError`,
-  MismatchRefValueError: `MismatchRefValueError`,
-  ResolveRefError: `ResolveRefError`,
-  ExpandRefError: `ExpandRefError`,
-  EmptyServerResponseFail: `EmptyServerResponseFail`,
-  AssertServerResponseFail: `AssertServerResponseFail`,
-  HTTPError: `HTTPError`,
-  RemoteUrlParseError: `RemoteUrlParseError`,
-  UnknownTransportError: `UnknownTransportError`,
-  AcquireLockFileFail: `AcquireLockFileFail`,
-  DoubleReleaseLockFileFail: `DoubleReleaseLockFileFail`,
-  InternalFail: `InternalFail`,
-  UnknownOauth2Format: `UnknownOauth2Format`,
-  MissingPasswordTokenError: `MissingPasswordTokenError`,
-  MissingUsernameError: `MissingUsernameError`,
-  MixPasswordTokenError: `MixPasswordTokenError`,
-  MixUsernamePasswordTokenError: `MixUsernamePasswordTokenError`,
-  MissingTokenError: `MissingTokenError`,
-  MixUsernameOauth2formatMissingTokenError: `MixUsernameOauth2formatMissingTokenError`,
-  MixPasswordOauth2formatMissingTokenError: `MixPasswordOauth2formatMissingTokenError`,
-  MixUsernamePasswordOauth2formatMissingTokenError: `MixUsernamePasswordOauth2formatMissingTokenError`,
-  MixUsernameOauth2formatTokenError: `MixUsernameOauth2formatTokenError`,
-  MixPasswordOauth2formatTokenError: `MixPasswordOauth2formatTokenError`,
-  MixUsernamePasswordOauth2formatTokenError: `MixUsernamePasswordOauth2formatTokenError`,
-  MaxSearchDepthExceeded: `MaxSearchDepthExceeded`,
-  PushRejectedNonFastForward: `PushRejectedNonFastForward`,
-  PushRejectedTagExists: `PushRejectedTagExists`,
-  AddingRemoteWouldOverwrite: `AddingRemoteWouldOverwrite`,
-  PluginUndefined: `PluginUndefined`,
-  CoreNotFound: `CoreNotFound`,
-  PluginSchemaViolation: `PluginSchemaViolation`,
-  PluginUnrecognized: `PluginUnrecognized`,
-  AmbiguousShortOid: `AmbiguousShortOid`,
-  ShortOidNotFound: `ShortOidNotFound`,
-  CheckoutConflictError: `CheckoutConflictError`
-}
-
