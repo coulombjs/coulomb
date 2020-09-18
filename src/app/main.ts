@@ -30,10 +30,15 @@ export interface MainApp<A extends AppConfig, M extends MainConfig<A>> {
 }
 
 
+function preventDefault(e: Electron.Event) {
+  e.preventDefault();
+}
+
+
 export const initMain = async <C extends MainConfig<any>>(config: C): Promise<MainApp<any, C>> => {
 
   // Prevent windows from closing while app is initialized
-  app.on('window-all-closed', (e: any) => e.preventDefault());
+  app.on('window-all-closed', preventDefault);
 
   log.catchErrors({ showDialog: true });
 
@@ -272,6 +277,7 @@ export const initMain = async <C extends MainConfig<any>>(config: C): Promise<Ma
     }));
   }
 
+  app.off('window-all-closed', preventDefault);
 
   // Open main window
   await _openWindow('default');
