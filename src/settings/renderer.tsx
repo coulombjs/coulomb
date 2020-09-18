@@ -143,7 +143,7 @@ const SettingInputList: React.FC<{ settings: Setting<any>[] }> = function ({ set
 
 interface SettingsInputProps {
   label: string
-  ipcSetting: SettingHook<any> 
+  ipcSetting: SettingHook<any>
   helpText?: string
 }
 const SettingInput: React.FC<SettingsInputProps> = function ({ label, ipcSetting, helpText }) {
