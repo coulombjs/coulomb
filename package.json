@@ -18,7 +18,7 @@
   "peerDependencies": {
     "@blueprintjs/core": "^3.28.2",
     "@blueprintjs/icons": "^3.18.1",
-    "electron": "^9.1.1",
+    "electron": "^9.4.0",
     "electron-log": "^4.2.2",
     "electron-webpack": "^2.8.2",
     "react": "^16.11.0",
@@ -38,7 +38,7 @@
     "commitizen": "^4.1.2",
     "css-loader": "^3.2.1",
     "cz-conventional-changelog": "3.2.0",
-    "electron": "^9.1.1",
+    "electron": "^9.4.0",
     "electron-log": "^4.2.2",
     "husky": "^4.2.5",
     "node-sass": "^4.13.1",
